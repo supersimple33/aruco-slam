@@ -15,8 +15,8 @@ from scipy.spatial.transform import Rotation
 INITIAL_CAMERA_UNCERTAINTY = 0.1
 INITIAL_LANDMARK_UNCERTAINTY = 0.7
 
-R_UNCERTAINTY = 3.0
-Q_UNCERTAINTY = 2.0
+R_UNCERTAINTY = 0.8
+Q_UNCERTAINTY = 0.5
 
 CAM_DIMS = 6 # x, y, z, roll, pitch, yaw
 LM_DIMS = 3 # x, y, z
@@ -74,7 +74,9 @@ class EKF(object):
         # prediction step:
         # no system model, no state change
         # just update the uncertainity matrix
-        q = np.eye(LM_DIMS * self.num_landmarks + CAM_DIMS) * Q_UNCERTAINTY
+        q_dims = LM_DIMS * self.num_landmarks + CAM_DIMS
+        q = np.zeros((q_dims, q_dims))
+        q[:CAM_DIMS, :CAM_DIMS] = np.eye(CAM_DIMS) * Q_UNCERTAINTY
         self.uncertainty += q
 
 

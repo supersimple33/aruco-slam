@@ -16,10 +16,13 @@ import viewer_2d as v2d
 DISPLAY_3D = True
 DISPLAY_2D = True
 
+SAVE_2D = True
+SAVE_3D = True
+
 CALIB_MTX_FILE = 'calibration/camera_matrix.npy'
 DIST_COEFFS_FILE = 'calibration/dist_coeffs.npy'
 
-VIDEO_FILE = 'video_scaled.mp4'
+VIDEO_FILE = 'input_video.mp4'
 
 IMAGE_SIZE = 1920, 1080
 DISPLAY_SIZE = 960, 540
@@ -31,25 +34,25 @@ np.set_printoptions(precision=3)
 np.set_printoptions(suppress=True)
 
 def load_matrices():
+    """
+    loads camera calibration matrices
+    """
+
     # assert that the camera matrix and distortion coefficients are saved
     assert os.path.exists(CALIB_MTX_FILE), \
         'Camera matrix not found. Run calibration.py first.'
     assert os.path.exists(DIST_COEFFS_FILE), \
         'Distortion coefficients not found. Run calibration.py first.'
-    
+
     calib_matrix = np.load(CALIB_MTX_FILE)
     dist_coeffs = np.load(DIST_COEFFS_FILE)
 
     return calib_matrix, dist_coeffs
 
-def correct_rotation(image):
-    h, w, _ = image.shape
-    if h > w:
-        image = cv2.transpose(image)
-        image = cv2.flip(image, 1)
-    return image
-
 def main():
+    """
+    runs main thread
+    """
     calib_matrix, dist_coeffs = load_matrices()
 
     # load the camera matrix and distortion coefficients, initialize the tracker
@@ -59,15 +62,11 @@ def main():
     # use the camera
     cap = cv2.VideoCapture(VIDEO_FILE)
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 0)
-    
-    tracked_positions = []
-    tracked_markers = []
-    camera_markers = []
 
     if DISPLAY_3D:
-        camera_viewer_3d = v3d.Viewer3D(IMAGE_SIZE)
+        camera_viewer_3d = v3d.Viewer3D(IMAGE_SIZE, SAVE_3D)
     if DISPLAY_2D:
-        image_viewer_2d = v2d.Viewer2D(calib_matrix, dist_coeffs)
+        image_viewer_2d = v2d.Viewer2D(calib_matrix, dist_coeffs, SAVE_2D)
 
     # number of frames
     frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -96,21 +95,21 @@ def main():
                 detected_poses
             )
         if DISPLAY_2D:
-            frame = image_viewer_2d.view(
+            q = image_viewer_2d.view(
                 frame,
                 camera_pose,
                 marker_poses,
                 detected_poses
             )
-            frame = cv2.resize(frame, DISPLAY_SIZE)
-            cv2.imshow('frame', frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break   
+            if q:
+                break
+
+    if DISPLAY_3D:
+        camera_viewer_3d.close()
+    if DISPLAY_2D:
+        image_viewer_2d.close()
 
     cap.release()
-    cv2.destroyAllWindows()
-
-    return tracked_positions, tracked_markers, camera_markers
 
 if __name__ == '__main__':
-    positions, markers, camera_markers = main()
+    main()
