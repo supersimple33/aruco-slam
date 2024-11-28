@@ -2,7 +2,7 @@ import cv2
 
 import numpy as np
 
-DISPLAY_SIZE = 0.1
+AXIS_SIZE = 0.1
 
 class Viewer2D():
     def __init__(self, camera_matrix, dist_coeffs):
@@ -18,12 +18,12 @@ class Viewer2D():
 
         # draw the points
         for p in points_detected:
-            frame = self.draw_axis(frame, p[3:6], p[:3], self.camera_matrix)
+            frame = self.draw_axis(frame, p[3:6], p[:3])
 
         return frame
 
 
-    def draw_axis(self, img, R, t, K):
+    def draw_axis(self, img, R, t):
         """
         https://stackoverflow.com/questions/30207467/how-to-draw-3d-coordinate-axes-with-opencv-for-face-pose-estimation
         """
@@ -33,9 +33,9 @@ class Viewer2D():
         rotV = R
 
         points = np.float32([[1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, 0]]).reshape(-1, 3)
-        points *= DISPLAY_SIZE
+        points *= AXIS_SIZE
         
-        axisPoints, _ = cv2.projectPoints(points, rotV, t, K, (0, 0, 0, 0))
+        axisPoints, _ = cv2.projectPoints(points, rotV, t, self.camera_matrix, (0, 0, 0, 0))
        
         point0 = tuple(axisPoints[0].ravel())
         point1 = tuple(axisPoints[1].ravel())
