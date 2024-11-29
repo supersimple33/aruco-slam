@@ -8,10 +8,11 @@ import os
 import cv2
 import numpy as np
 import tqdm
+import argparse
 
 from aruco_slam import ArucoSlam
-import viewer_3d as v3d
-import viewer_2d as v2d
+import viewers.viewer_3d as v3d
+import viewers.viewer_2d as v2d
 
 DISPLAY_3D = True
 DISPLAY_2D = True
@@ -21,8 +22,6 @@ SAVE_3D = True
 
 CALIB_MTX_FILE = 'calibration/camera_matrix.npy'
 DIST_COEFFS_FILE = 'calibration/dist_coeffs.npy'
-
-VIDEO_FILE = 'input_video.mp4'
 
 IMAGE_SIZE = 1920, 1080
 DISPLAY_SIZE = 960, 540
@@ -49,7 +48,7 @@ def load_matrices():
 
     return calib_matrix, dist_coeffs
 
-def main():
+def main(filename):
     """
     runs main thread
     """
@@ -60,7 +59,7 @@ def main():
     tracker = ArucoSlam(initial_pose, calib_matrix, dist_coeffs)
 
     # use the camera
-    cap = cv2.VideoCapture(VIDEO_FILE)
+    cap = cv2.VideoCapture(filename)
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 0)
 
     if DISPLAY_3D:
@@ -76,6 +75,8 @@ def main():
     i = 0
     while True:
         i += 1
+        # if i % 4 != 0:
+        #     continue
 
         iterator.update(1)
         ret, frame = cap.read()
@@ -112,4 +113,17 @@ def main():
     cap.release()
 
 if __name__ == '__main__':
-    main()
+    # get arguments
+    parser = argparse.ArgumentParser(description='Run the SLAM system')
+    parser.add_argument(
+        '--video',
+        type=str,
+        help='Path to video file',
+        default="input_video.mp4"
+        )
+
+    args = parser.parse_args()
+
+    video_file = args.video
+
+    main(video_file)

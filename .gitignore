@@ -5,7 +5,10 @@ __pycache__/
 
 # personal information
 *.jpg
+*.png
+*.avi
 *.mp4
+*.ipynb
 
 # C extensions
 *.so

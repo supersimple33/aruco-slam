@@ -7,7 +7,7 @@ from typing import Tuple, List
 import numpy as np
 import cv2
 
-from extended_kalman_filter import EKF
+from filters.extended_kalman_filter import EKF
 
 class ArucoSlam(object):
     """

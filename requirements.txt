@@ -1,5 +1,13 @@
-matplotlib==3.9.2
+clang==17.0.6
 numpy==1.21.5
 opencv_python==4.10.0.84
+pip==22.0.2
+PyOpenGL==3.1.7
+pytest==6.2.5
 scipy==1.14.1
+setuptools==75.5.0
+setuptools==59.6.0
+sphinx_rtd_theme==3.0.2
 sympy==1.13.2
+tqdm==4.66.5
+tqdm==4.57.0
