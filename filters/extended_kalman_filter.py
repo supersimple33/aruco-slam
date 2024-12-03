@@ -65,20 +65,46 @@ class EKF(object):
         - marker_poses: the updated marker poses in the map frame
         """
 
+        # add any new markers
         for idx, pose in zip(ids, poses):
             if idx in self.landmarks:
                 continue
             else:
                 self.add_marker(idx, pose)
 
-        # prediction step:
-        # no system model, no state change
-        # just update the uncertainity matrix
+        # perform prediction, update steps
+        self.predict()
+        self.update(ids, poses)
+
+        camera_pose = self.state[:CAM_DIMS]
+        marker_poses = self.state[CAM_DIMS:].reshape(-1, LM_DIMS)
+
+        return camera_pose, marker_poses
+
+    def predict(self):
+        """
+        Predicts the next state of the system
+        """
+
+        # no system model, no explicit state change
+        # just update the uncertainity matrix for camera motion
         q_dims = LM_DIMS * self.num_landmarks + CAM_DIMS
         q = np.zeros((q_dims, q_dims))
         q[:CAM_DIMS, :CAM_DIMS] = np.eye(CAM_DIMS) * Q_UNCERTAINTY
         self.uncertainty += q
 
+    def update(
+            self,
+            ids: List[int],
+            poses: List[np.ndarray]
+            ) -> None:
+        """
+        Updates the state of the filter
+
+        params:
+        - ids: list of ids of the markers
+        - poses: list of poses of the markers
+        """
 
         # perform update step
         z, h, dh = self.parse_poses(ids, poses)
@@ -91,11 +117,6 @@ class EKF(object):
         # update uncertainty
         ident = np.eye(LM_DIMS * self.num_landmarks + CAM_DIMS)
         self.uncertainty = (ident - kalman_gain @ dh) @ self.uncertainty
-
-        camera_pose = self.state[:CAM_DIMS]
-        marker_poses = self.state[CAM_DIMS:].reshape(-1, LM_DIMS)
-
-        return camera_pose, marker_poses
 
     def parse_poses(
             self,
@@ -124,11 +145,11 @@ class EKF(object):
 
             jacobian_row = self.landmark_dh(index)
 
-            xc, yc, zc, phi, theta, psi = self.state[:CAM_DIMS]
+            cam_state = self.state[:CAM_DIMS] # x, y, z, roll, pitch, yaw
             state_index = LM_DIMS*index + CAM_DIMS
-            xl, yl, zl = self.state[state_index:state_index + LM_DIMS]
+            landmark_state = self.state[state_index:state_index + LM_DIMS]
 
-            h_row = self.h([xc, yc, zc, phi, theta, psi, xl, yl, zl]).squeeze()
+            h_row = self.h([*cam_state, *landmark_state]).squeeze()
 
             # add to the matrices
             if z is None:
@@ -158,30 +179,22 @@ class EKF(object):
         - dh: the partial jacobian
         """
 
-        # get the camera pose in map space
-        camera_rotation = self.state[3:6]
-        camera_translation = self.state[:3]
-
-        x_mc, y_mc, z_mc = camera_translation
-        phi_mc, theta_mc, psi_mc = camera_rotation
+        cam_state = self.state[:CAM_DIMS] # x, y, z, roll, pitch, yaw
 
         beginning_index = LM_DIMS*index + CAM_DIMS
+
+        # x, y, z
         landmark_state = self.state[beginning_index:beginning_index+LM_DIMS]
 
-        x_ml, y_ml, z_ml = landmark_state
-
         # get the partial jacobian
-        jacobian = self.partial_jacobian(
-            [x_mc, y_mc, z_mc, phi_mc, theta_mc, psi_mc,
-             x_ml, y_ml, z_ml]
-        )
+        jacobian = self.partial_jacobian([*cam_state, *landmark_state])
 
         camera_jacobian = jacobian[:, :CAM_DIMS]
         landmark_jacobian = jacobian[:, CAM_DIMS:]
 
         # get the H matrix
         dh = np.zeros((LM_DIMS, LM_DIMS*self.num_landmarks + CAM_DIMS))
-        dh[:, :6] = camera_jacobian
+        dh[:, :CAM_DIMS] = camera_jacobian
 
         index = LM_DIMS * index + CAM_DIMS
         dh[:, index:index+LM_DIMS] = landmark_jacobian
