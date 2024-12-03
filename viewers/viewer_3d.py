@@ -19,7 +19,7 @@ POSE_POINT_SIZE = 5
 
 DISPLAY_SIZE = 960, 540
 
-VIDEO_NAME = "output_3d.mp4"
+VIDEO_NAME = "outputs/output_3d.mp4"
 
 class Viewer3D():
     """
@@ -104,14 +104,14 @@ class Viewer3D():
         if export_video:
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Use 'mp4v' for MP4 format
             self.video_writer = cv2.VideoWriter(VIDEO_NAME, fourcc, 20.0, DISPLAY_SIZE)
-            pangolin.SaveWindowOnRender('pangolin')
+            # pangolin.SaveWindowOnRender('pangolin')
 
     def close(self):
         """
         Destroys the viewer object
         """
-
-        self.video_writer.release()
+        if self.export_video:
+            self.video_writer.release()
 
     def view(
             self,
@@ -182,8 +182,8 @@ class Viewer3D():
         pangolin.FinishFrame()
 
         if self.export_video:
-            pangolin.SaveWindowOnRender('pangolin')
-            img = cv2.imread('pangolin.png')
+            pangolin.SaveWindowOnRender('outputs/pangolin')
+            img = cv2.imread('outputs/pangolin.png')
             self.video_writer.write(img)
 
     def draw_poses(

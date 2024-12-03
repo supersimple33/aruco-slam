@@ -10,7 +10,7 @@ from scipy.spatial.transform import Rotation as R
 AXIS_SIZE = 0.25
 DISPLAY_SIZE = 960, 540
 
-VIDEO_2D_FNAME = "output_2d.mp4"
+VIDEO_2D_FNAME = "outputs/output_2d.mp4"
 
 class Viewer2D():
     """
@@ -44,7 +44,8 @@ class Viewer2D():
         Shuts down the viewer
         """
 
-        self.video_writer.release()
+        if self.save_video:
+            self.video_writer.release()
         cv2.destroyAllWindows()
 
 

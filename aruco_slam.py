@@ -8,7 +8,7 @@ import numpy as np
 import cv2
 
 from filters.extended_kalman_filter import EKF
-from filters.gtsam import FactorGraph
+from filters.factor_graph import FactorGraph
 
 class ArucoSlam(object):
     """
@@ -120,11 +120,9 @@ class ArucoSlam(object):
 
             detected_poses = self.estimate_pose_of_markers(corners, 0.2)
 
-            camera_pose, marker_poses = self.filter.observe(ids, detected_poses)
+            # camera_pose, marker_poses = self.filter.observe(ids, detected_poses)
 
-            self.fg.observe(ids, detected_poses)
-
-            print("Reached")
+            camera_pose, marker_poses = self.fg.observe(ids, detected_poses)
 
         return frame, camera_pose, marker_poses, detected_poses
     

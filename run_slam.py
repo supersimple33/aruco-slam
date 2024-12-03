@@ -15,7 +15,7 @@ import viewers.viewer_3d as v3d
 import viewers.viewer_2d as v2d
 
 DISPLAY_3D = True
-DISPLAY_2D = True
+DISPLAY_2D = False
 
 SAVE_2D = True
 SAVE_3D = True
@@ -72,12 +72,7 @@ def main(filename):
 
     iterator = tqdm.tqdm(range(frames), desc='Processing frames', unit='frames')
 
-    i = 0
     while True:
-        i += 1
-        # if i % 4 != 0:
-        #     continue
-
         iterator.update(1)
         ret, frame = cap.read()
         if not ret:
