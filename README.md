@@ -23,7 +23,7 @@ Due to possible ambiguities in ArUco orientation estimation, only marker positio
 - [ ] Quaternions, Angle-Wrap Handling in EKF
 - [ ] UKF
 - [ ] Iteratative EKF
-- [x] GTSAM, ISAM2
+- [x] GTSAM, ISAM2 (Factor Graph)
 - [ ] Particle Filter
 - [x] 3D Visualization
 - [ ] Map Saving, Loading

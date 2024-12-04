@@ -10,7 +10,15 @@ from typing import (
 
 import numpy as np
 import sympy as sp
+import scipy.sparse as sparse
 from scipy.spatial.transform import Rotation
+
+# save to ignore the warning about the sparse matrix format
+import warnings
+warnings.filterwarnings(
+    "ignore",
+    message="splu converted its input to CSC format"
+)
 
 INITIAL_CAMERA_UNCERTAINTY = 0.1
 INITIAL_LANDMARK_UNCERTAINTY = 0.7
@@ -115,9 +123,14 @@ class EKF(object):
 
         # perform update step
         z, h, dh = self.parse_poses(ids, poses)
-        r = np.eye(dh.shape[0]) * R_UNCERTAINTY # measurement uncertainty
-        s = dh @ self.uncertainty @ dh.T + r    # innovation covariance
-        kalman_gain = self.uncertainty @ dh.T @ np.linalg.inv(s) # kalman gain
+        dh = sparse.csr_matrix(dh)
+        uncertainty = sparse.csr_matrix(self.uncertainty)
+
+        r = sparse.eye(dh.shape[0], format='csc') * R_UNCERTAINTY # measurement uncertainty
+        s = dh @ uncertainty @ dh.T + r    # innovation covariance
+
+        s_inv = sparse.linalg.spsolve(s, sparse.eye(s.shape[0], format='csc'))
+        kalman_gain = uncertainty @ dh.T @ s_inv # kalman gain
         innovation = kalman_gain @ (z - h)
         self.state += innovation
 
