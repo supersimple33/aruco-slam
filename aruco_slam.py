@@ -10,6 +10,9 @@ import cv2
 from filters.extended_kalman_filter import EKF
 from filters.factor_graph import FactorGraph
 
+KALMAN_FILTER = 'kalman'
+FACTOR_GRAPH = 'factorgraph'
+
 class ArucoSlam(object):
     """
     Slam object
@@ -19,7 +22,8 @@ class ArucoSlam(object):
             self,
             initial_pose: np.ndarray,
             calib_matrix: np.ndarray,
-            dist_coeffs: np.ndarray
+            dist_coeffs: np.ndarray,
+            filter_type: str
             ) -> None:
         """
         Initializes the slam object
@@ -28,14 +32,19 @@ class ArucoSlam(object):
         - initial_pose: the initial pose of the camera
         - calib_matrix: the camera calibration matrix
         - dist_coeffs: the camera distortion coefficients
+        - filter_type: the type of filter to use
         """
         self.calib_matrix = calib_matrix
         self.dist_coeffs = dist_coeffs
         self.detector = self.init_aruco_detector()
 
-        self.filter = EKF(initial_pose)
 
-        self.fg = FactorGraph(initial_pose)
+        if filter_type == KALMAN_FILTER:
+            self.filter = EKF(initial_pose)
+        elif filter_type == FACTOR_GRAPH:
+            self.filter = FactorGraph(initial_pose)
+        else:
+            raise ValueError('Invalid filter type. Use -h for help.')
 
         self.camera_pose = initial_pose
 
@@ -112,17 +121,15 @@ class ArucoSlam(object):
         corners, ids, _ = tuple(self.detector.detectMarkers(frame))
 
         detected_poses = np.array([])
-        camera_pose = self.filter.state[:6]
-        marker_poses = np.array([])
         if ids is not None:
             frame = cv2.aruco.drawDetectedMarkers(frame, corners, ids)
             ids = ids.flatten()
 
             detected_poses = self.estimate_pose_of_markers(corners, 0.2)
 
-            # camera_pose, marker_poses = self.filter.observe(ids, detected_poses)
+            self.filter.observe(ids, detected_poses)
 
-            camera_pose, marker_poses = self.fg.observe(ids, detected_poses)
+        camera_pose, marker_poses = self.filter.get_poses()
 
         return frame, camera_pose, marker_poses, detected_poses
     

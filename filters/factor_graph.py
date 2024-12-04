@@ -16,24 +16,16 @@ import gtsam
 from gtsam.symbol_shorthand import X, L
 from gtsam import Pose3, Point3, Rot3, Cal3_S2, Point2, noiseModel
 
-INITIAL_CAMERA_UNCERTAINTY = 0.1
-INITIAL_LANDMARK_UNCERTAINTY = 0.7
-
-PRIOR_NOISE_XYZ = 2.0 # meters
+# Uncertainty values
+PRIOR_NOISE_XYZ = 1.0 # meters
 PRIOR_NOISE_RPY = 20 * np.pi / 180 # degrees -> radians
+ODOM_NOISE_XYZ = 1.0 # meters
+ODOM_NOISE_RPY = 60 * np.pi / 180 # degrees -> radians
+MEASUREMENT_NOISE_XYZ = 1.0 # meters
+MEASUREMENT_NOISE_RPY = 30 * np.pi / 180 # degrees -> radians
 
-ODOM_NOISE_XYZ = 2.0 # meters
-ODOM_NOISE_RPY = 180 * np.pi / 180 # degrees -> radians
-
-MEASUREMENT_NOISE_XYZ = 0.1 # meters
-MEASUREMENT_NOISE_RPY = 100 * np.pi / 180 # degrees -> radians
-
-HISTORICAL_FREQUENCY = 1
+HISTORICAL_FREQUENCY = 10
 SLIDING_WINDOW_SIZE = 3
-
-
-CAM_DIMS = 6 # x, y, z, roll, pitch, yaw
-LM_DIMS = 3 # x, y, z
 
 class FactorGraph(object):
     """
@@ -80,25 +72,25 @@ class FactorGraph(object):
             )
         )
 
-        self.initial_estimate.insert(
-            X(0),
-            Pose3(
-                Rot3.Rodrigues(self.rotation),
-                Point3(self.position)
-            )
+        # add the inital pose to the estimates
+        pose = Pose3(
+            Rot3.Rodrigues(self.rotation),
+            Point3(self.position)
         )
-        self.current_estimate.insert(
-            X(0),
-            Pose3(
-                Rot3.Rodrigues(self.rotation),
-                Point3(self.position)
-            )
-        )
+        self.initial_estimate.insert(X(0), pose)
+        self.current_estimate.insert(X(0), pose)
 
+        # keep track of landmark indices
         self.num_landmarks = 0
         self.landmarks = {}
 
+        # keep track of what timestep we are on
         self.i = 0
+        self.historical_timestep = True
+        self.historical_factors = []
+
+        # window to keep track of the last few poses and their factors
+        # self.sliding_window = []
 
     def observe(
             self,
@@ -117,26 +109,20 @@ class FactorGraph(object):
         - marker_poses: the updated marker poses in the map frame
         """
 
+        self.historical_timestep = self.i % HISTORICAL_FREQUENCY == 0
         camera_pose = self.current_estimate.atPose3(X(self.i))
 
         for idx, pose in zip(ids, poses):
             self.add_landmark_observation(idx, pose, camera_pose)
 
-        self.initial_estimate.insert(
-            X(self.i + 1),
-            camera_pose
-        )
-        self.graph.push_back(
-            gtsam.BetweenFactorPose3(
-                X(self.i + 1),
-                X(self.i),
-                Pose3(
-                    Rot3.Rodrigues([0, 0, 0]),
-                    Point3(0, 0, 0)
-                ), # TODO this needs to be from c_m to c_c,t-1
-                self.odom_noise
-            )
-        )
+        # use last camera pose and zero motion model to add odometry factor
+        self.add_odom_factor_and_estimate(camera_pose)
+
+        # FIXME: historical factors should be present at every timestep. 
+        # Clear graph and add timesteps manually at every timestep?
+        if self.historical_timestep:
+            for factor in self.historical_factors:
+                self.graph.push_back(factor)
 
         # don't optimize on the first iteration
         if self.i == 0:
@@ -149,6 +135,38 @@ class FactorGraph(object):
         self.i += 1
 
         self.prune_graph()
+
+    def add_odom_factor_and_estimate(
+            self,
+            camera_pose: gtsam.Pose3
+            ) -> None:
+        """
+        Adds an odometry factor to the graph
+
+        params:
+        - camera_pose: the pose of the camera
+        """
+        self.initial_estimate.insert(
+            X(self.i + 1),
+            camera_pose
+        )
+
+        self.graph.push_back(
+            gtsam.BetweenFactorPose3(
+                X(self.i + 1),
+                X(self.i),
+                Pose3(
+                    Rot3.Rodrigues([0, 0, 0]),
+                    Point3(0, 0, 0)
+                ),
+                self.odom_noise
+            )
+        )
+
+    def get_poses(self):
+        """
+        Returns the poses of the camera and the landmarks
+        """
 
         camera_pose = self.current_estimate.atPose3(X(self.i))
         camera_rot = camera_pose.rotation().rpy()
@@ -168,23 +186,9 @@ class FactorGraph(object):
         Prunes the graph by removing old nodes
         """
 
-        # if self.i % HISTORICAL_FREQUENCY == 0:
-        #     return
-        # elif self.i < SLIDING_WINDOW_SIZE:
-        #     return
-        if self.i < SLIDING_WINDOW_SIZE:
-            return
-        
-        prune_idx = self.i - SLIDING_WINDOW_SIZE
-
-        # keys = list(self.graph.keyVector())
-        # index = keys.index(X(prune_idx))
-
-        # remove the old nodes from the graph
-        # self.graph.remove(index)
-        self.graph.resize(300)
-
-        self.current_estimate.erase(X(prune_idx))
+        # TODO: implement a more intelligent, timestep aware
+        #  way to prune the graph
+        self.graph.resize(600)
 
     def add_landmark_observation(
             self,
@@ -202,6 +206,8 @@ class FactorGraph(object):
         returns:
         - None
         """
+
+
         if idx in self.landmarks:
             idx = self.landmarks[idx]
         else:
@@ -219,7 +225,7 @@ class FactorGraph(object):
             # put the landmark's pose in map frame
             t_ml = rot_mc @ pose[:3] + camera_translation
 
-            self.initial_estimate.insert( # TODO this needs from lm_c to lm_m
+            self.initial_estimate.insert(
                 L(idx),
                 Pose3(
                     Rot3.Rodrigues([0, 0, 0]),
@@ -227,16 +233,19 @@ class FactorGraph(object):
                 )
             )
 
-        roll, pitch, yaw = camera_pose.rotation().rpy()
+        cam_rot_inv = camera_pose.rotation().inverse()
+        factor = gtsam.BetweenFactorPose3(
+                    X(self.i),
+                    L(idx),
+                    Pose3(
+                        cam_rot_inv,
+                        Point3(pose[:3]) # landmark in camera frame
+                    ),
+                    self.measurement_noise
+                )
 
-        self.graph.push_back(
-            gtsam.BetweenFactorPose3(
-                X(self.i),
-                L(idx),
-                Pose3(
-                    Rot3.Rodrigues([-roll, -pitch, -yaw]),
-                    Point3(pose[:3])
-                ),
-                self.measurement_noise
-            )
-        )
+        # add the observation to the graph
+        self.graph.push_back(factor)
+
+        if self.historical_timestep:
+            self.historical_factors.append(factor)

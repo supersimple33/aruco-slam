@@ -15,8 +15,9 @@ import viewers.viewer_3d as v3d
 import viewers.viewer_2d as v2d
 
 DISPLAY_3D = True
-DISPLAY_2D = False
+DISPLAY_2D = True
 
+# contingent on the display flags
 SAVE_2D = True
 SAVE_3D = True
 
@@ -48,7 +49,7 @@ def load_matrices():
 
     return calib_matrix, dist_coeffs
 
-def main(filename):
+def main(args):
     """
     runs main thread
     """
@@ -56,10 +57,10 @@ def main(filename):
 
     # load the camera matrix and distortion coefficients, initialize the tracker
     initial_pose = np.array([0, 0, 0, 0, 0, 0]) # x, y, z, roll, pitch, yaw
-    tracker = ArucoSlam(initial_pose, calib_matrix, dist_coeffs)
+    tracker = ArucoSlam(initial_pose, calib_matrix, dist_coeffs, args.filter)
 
     # use the camera
-    cap = cv2.VideoCapture(filename)
+    cap = cv2.VideoCapture(args.video)
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 0)
 
     if DISPLAY_3D:
@@ -116,9 +117,15 @@ if __name__ == '__main__':
         help='Path to video file',
         default="input_video.mp4"
         )
+    parser.add_argument(
+        '--filter',
+        type=str,
+        help='Filter to use (kalman, factorgraph)',
+        default='kalman'
+        )
 
     args = parser.parse_args()
 
     video_file = args.video
 
-    main(video_file)
+    main(args)

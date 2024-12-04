@@ -21,6 +21,8 @@ Q_UNCERTAINTY = 0.3
 CAM_DIMS = 6 # x, y, z, roll, pitch, yaw
 LM_DIMS = 3 # x, y, z
 
+XYZ_DIMS = 3 # x, y, z
+
 class EKF(object):
     """
     Implements a Kalman Filter that tracks the positions of the cameras and 
@@ -32,8 +34,8 @@ class EKF(object):
         initializes filter
         """
 
-        self.position = initial_camera_pose[:3]
-        self.rotation = initial_camera_pose[3:]
+        self.position = initial_camera_pose[:XYZ_DIMS]
+        self.rotation = initial_camera_pose[XYZ_DIMS:]
 
         # 6n + 6, where n is the number of landmarks
         self.state = np.array(initial_camera_pose)
@@ -75,6 +77,11 @@ class EKF(object):
         # perform prediction, update steps
         self.predict()
         self.update(ids, poses)
+    
+    def get_poses(self):
+        """
+        Returns the current camera and marker poses
+        """
 
         camera_pose = self.state[:CAM_DIMS]
         marker_poses = self.state[CAM_DIMS:].reshape(-1, LM_DIMS)
@@ -153,11 +160,11 @@ class EKF(object):
 
             # add to the matrices
             if z is None:
-                z = pose[:3] # only looking at translation
+                z = pose[:XYZ_DIMS] # only looking at translation
                 h = h_row
                 dh = jacobian_row
             else:
-                z = np.hstack((z, pose[:3]))
+                z = np.hstack((z, pose[:XYZ_DIMS]))
                 h = np.hstack((h, h_row))
                 dh = np.vstack((dh, jacobian_row))
 
@@ -213,12 +220,14 @@ class EKF(object):
         camera_translation = camera_pose[:3]
         camera_rotation = camera_pose[3:]
 
+        # FIXME this may be wrong, but since all markers are added at nearly the
+        # zero rotation, a new demo will be needed to test this
         # update the state
         rot_cm = Rotation.from_euler('xyz', camera_rotation).as_matrix()
         rot_mc = np.linalg.inv(rot_cm)
 
         # put the landmark's pose in map frame
-        t_ml = rot_mc @ pose[:3] + camera_translation
+        t_ml = rot_cm @ pose[:XYZ_DIMS] + camera_translation
 
         self.state = np.hstack((self.state, t_ml))
 
@@ -288,5 +297,6 @@ class EKF(object):
         # Lambdify the Jacobian
         dh = sp.lambdify([variables], jacobian, modules=['numpy'])
 
-        return h , dh
+        # return the lambdas
+        return h, dh
     
