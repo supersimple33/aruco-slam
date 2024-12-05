@@ -14,7 +14,7 @@ from aruco_slam import ArucoSlam
 import viewers.viewer_3d as v3d
 import viewers.viewer_2d as v2d
 
-DISPLAY_3D = True
+DISPLAY_3D = False
 DISPLAY_2D = True
 
 # contingent on the display flags

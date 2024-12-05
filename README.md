@@ -1,16 +1,74 @@
-# ArUco SLAM
+<h1 align="center">ArUco SLAM</h1>
 
-This project aims to use ArUco markers to perform SLAM with a handheld camera in a 3D environment. With no motion model, the predicted motion relies exclusively on ArUco marker measurements.
+<div align=center>
 
-The gifs below may take a second to load.
+  **Using various algorithms to perform SLAM with a monocular camera.** 
+
+![Aruco SLAM](outputs/factorgraph.gif)
+</div>
+
+## About
+
+**ArUco** markers are a type of fiducial marker commonly used in computer vision applications, especially because they are built into OpenCV. Since their size is known, their corners can be used with the PnP algorithm to estimate their pose in the camera frame. Additionally, ArUco markers individually encode an ID. Together, these properties make them ideal for SLAM applications.
+
+**SLAM** stands for Simultaneous Localization and Mapping. This means that the system can localize itself in an environment while simultaneously building out its understanding of that environment. This project detects the position and orientation of ArUco markers in a video feed, inserts those markers into a map, and then uses various methods to optimize the estimates for both the camera and marker positions. In the video above, all markers are placed randomly; before the first frame is processed, there is no information about their positions.
+
+**Why is this important?** SLAM is a fundamental problem in robotics and computer vision. It is used in self-driving cars, drones, and augmented reality applications. Will this project be used in any of those applications? Probably not. But it is a fun and challenging problem to work on.
 
 ## Extended Kalman Filter:
 
+Due to (non-linear) rotations of the camera, a Kalman Filter cannot be used. 
+
+The key components of the Extended Kalman Filter are as follows:
+- **State Vector**: the 3D position and orientation of the camera, along with the 3D position of each ArUco marker (all in the map frame):
+  - $x_{cam}, y_{cam}, z_{cam}, roll_{cam}, pitch_{cam}, yaw_{cam}, x_{m0}, y_{m0}, z_{lm0}, x_{m1}, y_{m1}, z_{m1}, ...$
+  - There will be $3n + 6$ dimensions, for $n$ landmarks
+- **Measurement** Vector: the 3D position of each ArUco marker in the camera frame:
+  - ${}^{cam}x_{mi},{}^{cam}y_{mi},{}^{cam}z_{mi}$    
+- **State Transition**: since there is no motion model, we only add uncertainty to the camera's state. Since the landmarks are static, we don't modify them at all.
+  - $X_{k|k-1} = X_{k-1|k-1}$
+- **Measurement Model**: in order to model what we will measure, we use get the displacement between the landmark and the camera positions ($X$), and then rotate it to put it in the camera frame:
+  - ${}^{cam}X_{marker} = {}^{cam}R_{map} \cdot ({}^{map}X_{marker} - {}^{map}X_{cam})$
+ 
+There is an excellent explanation by Cyrill Stachniss for a similar, 2D example that can be found [here](https://www.youtube.com/watch?v=X30sEgIws0g).
+  
+
+<details>
+  <summary><strong>Visualization</strong></summary>
+  
 ![Aruco SLAM](outputs/ekf.gif)
+</details>
+
 
 ## Factor Graph:
+<div align="center">
+  <img src="https://gtsam.org/assets/fg-images/image1.png" width="450" height="300"/>
+  <p><em>Image credit: GTSAM</em></p>
+</div>
 
+A factor graph optimizes the joint probability:
+
+$P(X \mid Z) \propto \prod_{i} \phi_i(X_i, Z_i)$
+
+Where:
+- $X$: the camera poses and the landmark positions
+- $Z$: the measured landmark poses in the camera frame
+- $\phi_i$: the factor that relates one camera pose to the next as well as each camera pose to the landmark that were seen at that time
+
+In other words, we can estimate the camera and landmark positions by optimizing the posterior probability.
+
+It should also be noted that, similar to the EKF, the factor graph does not have a motion model. Therefore, the factors connecting sequential camera poses are zero change with high uncertainty, thus weighting the measurements more heavily.
+
+My implementation leverages GTSAM with the ISAM2 solver, following the postulation above. It reconstructs the graph at each timestep, maintaining conciseness while also accounting for both the local environment and historical constraints.
+
+<details>
+  <summary><strong>Visualization</strong></summary>
+
+This is the same as the gif shown at the top of the README.
+  
 ![GTSAM Factor Graph](outputs/factorgraph.gif)
+</details>
+
 
 ## Orientation Ambiguities
 
@@ -23,9 +81,10 @@ Due to possible ambiguities in ArUco orientation estimation, only marker positio
 - [ ] Quaternions, Angle-Wrap Handling in EKF
 - [ ] UKF
 - [ ] Iteratative EKF
-- [x] GTSAM, ISAM2 (Factor Graph)
+- [x] Factor Graph
 - [ ] Particle Filter
 - [x] 3D Visualization
 - [ ] Map Saving, Loading
 - [ ] Trajectory Saving
 - [ ] Ground Truth Comparison
+- [ ] Duplicate Marker ID Handling
