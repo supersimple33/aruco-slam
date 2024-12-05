@@ -1,10 +1,10 @@
-"""
-Script written by Ed Towney to calibrate using Charuco boards in OpenCV.
+"""Script written by Ed Towney to calibrate using Charuco boards in OpenCV.
 https://medium.com/@ed.twomey1/using-charuco-boards-in-opencv-237d8bc9e40d
 """
 
-import cv2
 import os
+
+import cv2
 import numpy as np
 
 # ------------------------------
@@ -15,7 +15,7 @@ SQUARES_HORIZONTALLY = 7
 SQUARE_LENGTH = 0.03
 MARKER_LENGTH = 0.015
 # ...
-PATH_TO_YOUR_IMAGES = './images'
+PATH_TO_YOUR_IMAGES = "./images"
 
 # IMAGE_SIZE = (960, 540)
 IMAGE_SIZE = (1920, 1080)
@@ -47,9 +47,9 @@ def calibrate_and_save_parameters():
         image = cv2.imread(image_file)
         image = correct_rotation(image)
         image = cv2.resize(image, IMAGE_SIZE)
-        
+
         marker_corners, marker_ids, _ = cv2.aruco.detectMarkers(image, dictionary, parameters=params)
-        
+
         # If at least one marker is detected
         if len(marker_ids) > 5:
             charuco_retval, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(marker_corners, marker_ids, image, board)
@@ -61,13 +61,13 @@ def calibrate_and_save_parameters():
     retval, camera_matrix, dist_coeffs, rvecs, tvecs = cv2.aruco.calibrateCameraCharuco(all_charuco_corners, all_charuco_ids, board, image.shape[:2], None, None)
 
     # # Save calibration data
-    np.save('camera_matrix.npy', camera_matrix)
-    np.save('dist_coeffs.npy', dist_coeffs)
+    np.save("camera_matrix.npy", camera_matrix)
+    np.save("dist_coeffs.npy", dist_coeffs)
 
-    print('Camera Matrix:')
+    print("Camera Matrix:")
     print(camera_matrix)
 
-    print('Distortion Coefficients:')
+    print("Distortion Coefficients:")
     print(dist_coeffs)
 
     # Iterate through displaying all the images
@@ -80,10 +80,10 @@ def calibrate_and_save_parameters():
         marker_corners, marker_ids, _ = cv2.aruco.detectMarkers(image, dictionary, parameters=params)
         image = cv2.aruco.drawDetectedMarkers(image, marker_corners, marker_ids)
         undistorted_image = cv2.undistort(image, camera_matrix, dist_coeffs)
-        
+
         undistorted_image = cv2.resize(undistorted_image, DISPLAY_SIZE)
-        cv2.imshow('Undistorted Image', undistorted_image)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        cv2.imshow("Undistorted Image", undistorted_image)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
     cv2.destroyAllWindows()
