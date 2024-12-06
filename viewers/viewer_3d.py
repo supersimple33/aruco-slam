@@ -1,8 +1,19 @@
 """Module for creating 3D visualization.
 
 Important:
+
+git clone https://github.com/uoip/pangolin.git
+cd pangolin
+mkdir build
+cd build
+cmake .. -DPython_EXECUTABLE=`which python3` -DBUILD_PANGOLIN_FFMPEG=OFF
+make -j8
+cd ..
+
 pangolin needs to have setup.py changed:
 all instances of 'install_dirs' -> 'install_dir'
+
+python setup.py install
 
 """
 

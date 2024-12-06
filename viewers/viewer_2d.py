@@ -84,7 +84,7 @@ class Viewer2D:
         if cv2.waitKey(1) & 0xFF == ord("q"):
             return True
 
-        if self.save_video:
+        if self.export_video:
             self.video_writer.write(frame)
 
         return False

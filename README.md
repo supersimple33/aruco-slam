@@ -109,9 +109,26 @@ discussed more thoroughly in
 the future, I may opt to use the stable `x` and `y` dimensions as part of the 
 state for better results.
 
+## Installation
+
+```
+sudo apt-get install mesa-utils libglew-dev
+git clone --recursive https://github.com/yishaiSilver/aruco-slam.git
+cd aruco-slam
+pip install -r requirements.txt
+cd thirdparty/pangolin
+mkdir build
+cd build
+cmake .. -DPython_EXECUTABLE=`which python` -DBUILD_PANGOLIN_FFMPEG=OFF
+make -j8
+cd ../..
+python pangolin_setup.py install
+```
+
 ## TODOs
 
 - [x] ArUco Detection, Pose Estimation 
+- [ ] Moving Average Motion Model  
 - [x] EKF
 - [ ] Quaternions, Angle-Wrap Handling in EKF
 - [ ] UKF
@@ -130,3 +147,5 @@ state for better results.
 [1] Cyrill Stachniss. (2020, October 2). EKF-SLAM (Cyrill Stachniss). YouTube. https://www.youtube.com/watch?v=X30sEgIws0g
 
 [2] Dellaert, F., & GTSAM Contributors. (2022, May). *borglab/gtsam* (Version 4.2a8) [Software]. Georgia Tech Borg Lab. https://doi.org/10.5281/zenodo.5794541
+
+[3] uoip. (2018, January 23). Pangolin. GitHub. Retrieved December 6, 2024, from https://github.com/uoip/pangolin
