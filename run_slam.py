@@ -72,12 +72,17 @@ def main(cmdline_args: argparse.Namespace) -> None:
     if DISPLAY_3D:
         camera_viewer_3d = v3d.Viewer3D(export_video=SAVE_3D)
     if DISPLAY_2D:
-        image_viewer_2d = v2d.Viewer2D(calib_matrix, dist_coeffs, export_video=SAVE_2D)
+        image_viewer_2d = v2d.Viewer2D(
+            calib_matrix,
+            dist_coeffs,
+            export_video=SAVE_2D,
+        )
 
-    # number of frames
-    frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-    iterator = tqdm.tqdm(range(frames), desc="Processing frames", unit="frames")
+    iterator = tqdm.tqdm(
+        range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT))),  # total number of frames
+        desc="Processing frames",
+        unit="frames",
+    )
 
     while True:
         iterator.update(1)

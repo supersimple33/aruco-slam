@@ -99,7 +99,7 @@ class FactorGraph:
         self.historical_factors = []
 
         # window to keep track of the last few poses and their factors
-        # self.sliding_window = []
+        self.sliding_window = []
 
     def observe(
         self,

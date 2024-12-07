@@ -1,7 +1,6 @@
 """Module for creating 3D visualization.
 
 Important:
-
 git clone https://github.com/uoip/pangolin.git
 cd pangolin
 mkdir build
