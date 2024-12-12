@@ -20,8 +20,10 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: List directory contents
+        run: ls -la
       - name: Ruff-action
         uses: astral-sh/ruff-action@v2
         with:
-          args: "check . --ignore FIX002,F841" # todo comments, unused rot_mc
-          src: "/home/runner/work/aruco-slam"
+         args: "check . --ignore FIX002,F841" # todo comments, unused rot_mc
+         src: "/home/runner/work/aruco-slam"

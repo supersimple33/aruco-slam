@@ -207,12 +207,14 @@ class EKF:
         self,
         idx: int,
         pose: np.ndarray,
+        uncertainity: np.ndarray = None,
     ) -> None:
         """Add a new marker to the state.
 
         Arguments:
             idx: the id of the marker
             pose: the pose of the marker
+            uncertainity: the uncertainity of the pose, if known (from map)
 
         """
         self.landmarks[idx] = self.num_landmarks
@@ -235,7 +237,15 @@ class EKF:
 
         # expand the uncertainity matricies
         n_dims = LM_DIMS * self.num_landmarks + CAM_DIMS
-        new_uncertainty = np.eye(n_dims) * INITIAL_LANDMARK_UNCERTAINTY
+
+        new_uncertainty = np.eye(n_dims)
+        if uncertainity is not None:
+            new_uncertainty[-LM_DIMS:, -LM_DIMS:] *= uncertainity
+        else:
+            new_uncertainty[-LM_DIMS:, -LM_DIMS:] *= (
+                INITIAL_LANDMARK_UNCERTAINTY
+            )
+
         new_uncertainty[: n_dims - LM_DIMS, : n_dims - LM_DIMS] = (
             self.uncertainty
         )

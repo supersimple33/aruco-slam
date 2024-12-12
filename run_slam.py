@@ -20,8 +20,12 @@ from outputs.trajectory_writer import TrajectoryWriter
 # output files
 TRAJECTORY_TEXT_FILE = "outputs/trajectory.txt"
 
+# map
+LOAD_MAP = True
+MAP_FILE = "outputs/map.txt"
+
 # display flags
-DISPLAY_3D = False
+DISPLAY_3D = True
 DISPLAY_2D = True
 
 # contingent on the display flags
@@ -70,6 +74,7 @@ def main(cmdline_args: argparse.Namespace) -> None:
         calib_matrix,
         dist_coeffs,
         cmdline_args.filter,
+        MAP_FILE if LOAD_MAP else None,
     )
 
     # use the camera

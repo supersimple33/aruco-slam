@@ -47,7 +47,7 @@ The key components of the Extended Kalman Filter are as follows:
  
 There is an excellent explanation by Cyrill Stachniss for a similar, 2D example that can be found [here](https://www.youtube.com/watch?v=X30sEgIws0g) [1].
 
-`python3 run_slam.py --kalman`
+`python3 run_slam.py --filter ekf`
   
 
 <details>
@@ -89,7 +89,7 @@ postulation above. It reconstructs the graph at each timestep, maintaining
 conciseness while also accounting for both the local environment and historical
 constraints.
 
-`python3 run_slam.py --factorgraph`
+`python3 run_slam.py --filter factorgraph`
 
 <details>
   <summary><strong>Visualization</strong></summary>
@@ -135,13 +135,15 @@ Please ensure that you have properly calibrated your camera.
 - [x] EKF
 - [ ] Quaternions, Angle-Wrap Handling in EKF
 - [ ] UKF
-- [ ] Iteratative EKF
+- [ ] Iterative EKF
 - [x] Factor Graph
 - [ ] Particle Filter
 - [x] 3D Visualization
 - [x] Map Saving
 - [ ] Map Loading
 - [x] Trajectory Saving
+
+Nice To haves:
 - [ ] Ground Truth Comparison
 - [ ] Duplicate Marker ID Handling
 - [ ] Non-Static Landmark Tracking

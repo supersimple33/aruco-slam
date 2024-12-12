@@ -1,5 +1,7 @@
 """Handles the detecting ArUco. Acts as simple wrapper for EKF."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import cv2
@@ -22,6 +24,7 @@ class ArucoSlam:
         calib_matrix: np.ndarray,
         dist_coeffs: np.ndarray,
         filter_type: str,
+        map_file: str | None,
     ) -> None:
         """Initialize the slam object.
 
@@ -30,6 +33,7 @@ class ArucoSlam:
             calib_matrix: the camera calibration matrix
             dist_coeffs: the camera distortion coefficients
             filter_type: the type of filter to use
+            map_file: the file to load the map from
 
         """
         self.calib_matrix = calib_matrix
@@ -45,6 +49,9 @@ class ArucoSlam:
             raise ValueError(error_message)
 
         self.camera_pose = initial_pose
+
+        if map_file is not None:
+            self.load_map(map_file)
 
     def init_aruco_detector(self) -> cv2.aruco.ArucoDetector:
         """Create an aruco detector.
@@ -167,10 +174,36 @@ class ArucoSlam:
                 file.write(f"{index_to_id[i]}\n")
 
                 # write the pose
-                file.write(f"{pose}\n")
+                file.write(f"{', '.join(map(str, pose))}\n")
 
                 # write the uncertainty for pose variables
-                file.write(f"{uncertainties[i, :len(pose)]}\n")
+                file.write(
+                    f"{', '.join(map(str, uncertainties[i, :len(pose)]))}\n",
+                )
 
                 # write a newline
                 file.write("\n")
+
+    def load_map(self, filename: str) -> None:
+        """Load the map from a file.
+
+        Arguments:
+            filename: the name of the file to load the map from.
+
+        """
+        with Path(filename).open("r", encoding="utf-8") as file:
+            lines = file.readlines()
+
+            # skip the header
+            lines = lines[4:]
+
+            for i in range(0, len(lines), 4):
+                id_ = int(lines[i].strip())
+                pose = np.array(lines[i + 1].strip().split(", "), np.float32)
+                uncertainty = np.array(
+                    lines[i + 2].strip().split(", "),
+                    np.float32,
+                )
+
+                # TODO (ssilver): ensure this is in map frame, not camera frame
+                self.filter.add_marker(id_, pose, uncertainty)

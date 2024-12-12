@@ -205,6 +205,46 @@ class FactorGraph:
         # aware way to prune the graph
         self.graph.resize(600)
 
+    def add_marker(
+        self,
+        idx: int,
+        pose: np.ndarray,
+        uncertainity: np.ndarray = None,
+    ) -> None:
+        """Add a new marker to the state.
+
+        Arguments:
+            idx: the id of the marker
+            pose: the pose of the marker
+            uncertainity: the uncertainity of the pose, if known (from map)
+
+        """
+        camera_pose = self.current_estimate.atPose3(X(self.i))
+
+        _ = uncertainity
+
+        self.landmarks[idx] = self.num_landmarks
+        idx = self.num_landmarks
+        self.num_landmarks += 1
+
+        camera_translation = camera_pose.translation()
+        camera_rotation = camera_pose.rotation().rpy()
+
+        # update the state
+        rot_cm = Rotation.from_euler("xyz", camera_rotation).as_matrix()
+        rot_mc = np.linalg.inv(rot_cm)
+
+        # put the landmark's pose in map frame
+        t_ml = rot_mc @ pose[:3] + camera_translation
+
+        self.initial_estimate.insert(
+            L(idx),
+            Pose3(
+                Rot3.Rodrigues([0, 0, 0]),
+                Point3(t_ml),
+            ),
+        )
+
     def add_landmark_observation(
         self,
         idx: int,
@@ -222,27 +262,8 @@ class FactorGraph:
         if idx in self.landmarks:
             idx = self.landmarks[idx]
         else:
-            self.landmarks[idx] = self.num_landmarks
-            idx = self.num_landmarks
-            self.num_landmarks += 1
-
-            camera_translation = camera_pose.translation()
-            camera_rotation = camera_pose.rotation().rpy()
-
-            # update the state
-            rot_cm = Rotation.from_euler("xyz", camera_rotation).as_matrix()
-            rot_mc = np.linalg.inv(rot_cm)
-
-            # put the landmark's pose in map frame
-            t_ml = rot_mc @ pose[:3] + camera_translation
-
-            self.initial_estimate.insert(
-                L(idx),
-                Pose3(
-                    Rot3.Rodrigues([0, 0, 0]),
-                    Point3(t_ml),
-                ),
-            )
+            self.add_marker(idx, pose)
+            idx = self.landmarks[idx]
 
         cam_rot_inv = camera_pose.rotation().inverse()
         factor = gtsam.BetweenFactorPose3(
