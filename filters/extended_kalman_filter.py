@@ -21,8 +21,7 @@ Q_UNCERTAINTY = 0.3
 
 CAM_DIMS = 6  # x, y, z, roll, pitch, yaw
 LM_DIMS = 3  # x, y, z
-
-XYZ_DIMS = 3  # x, y, z
+XYZ_DIMS = 3
 
 
 class EKF:
@@ -78,6 +77,10 @@ class EKF:
         marker_poses = self.state[CAM_DIMS:].reshape(-1, LM_DIMS)
 
         return camera_pose, marker_poses
+
+    def get_lm_uncertainties(self) -> np.ndarray:
+        """Return the uncertainties of the landmarks."""
+        return np.diagonal(self.uncertainty)[CAM_DIMS:].reshape(-1, LM_DIMS)
 
     def predict(self) -> None:
         """Predict the next state of the system."""
@@ -233,7 +236,9 @@ class EKF:
         # expand the uncertainity matricies
         n_dims = LM_DIMS * self.num_landmarks + CAM_DIMS
         new_uncertainty = np.eye(n_dims) * INITIAL_LANDMARK_UNCERTAINTY
-        new_uncertainty[: n_dims - LM_DIMS, : n_dims - LM_DIMS] = self.uncertainty
+        new_uncertainty[: n_dims - LM_DIMS, : n_dims - LM_DIMS] = (
+            self.uncertainty
+        )
         self.uncertainty = new_uncertainty
 
     def initialize_h(self) -> None:

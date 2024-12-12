@@ -1,12 +1,15 @@
 """Handles the detecting ArUco. Acts as simple wrapper for EKF."""
 
+from pathlib import Path
+
 import cv2
 import numpy as np
 
 from filters.extended_kalman_filter import EKF
 from filters.factor_graph import FactorGraph
 
-KALMAN_FILTER = "kalman"
+# Filter types
+KALMAN_FILTER = "ekf"
 FACTOR_GRAPH = "factorgraph"
 
 
@@ -138,3 +141,36 @@ class ArucoSlam:
         camera_pose, marker_poses = self.filter.get_poses()
 
         return frame, camera_pose, marker_poses, detected_poses
+
+    def save_map(self, filename: str) -> None:
+        """Save the map to a file.
+
+        Arguments:
+            filename: the name of the file to save the map to.
+
+        """
+        _, marker_poses = self.filter.get_poses()
+
+        index_to_id = {v: k for k, v in self.filter.landmarks.items()}
+
+        uncertainties = self.filter.get_lm_uncertainties()
+
+        with Path(filename).open("w", encoding="utf-8") as file:
+            # write the header:
+            file.write("# landmark_id\n")
+            file.write("# x y z\n")
+            file.write("# uncertainty\n")
+            file.write("\n")
+
+            for i, pose in enumerate(marker_poses):
+                # write the id
+                file.write(f"{index_to_id[i]}\n")
+
+                # write the pose
+                file.write(f"{pose}\n")
+
+                # write the uncertainty for pose variables
+                file.write(f"{uncertainties[i, :len(pose)]}\n")
+
+                # write a newline
+                file.write("\n")

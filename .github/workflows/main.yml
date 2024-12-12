@@ -23,4 +23,5 @@ jobs:
       - name: Ruff-action
         uses: astral-sh/ruff-action@v2
         with:
-          args: "check . --ignore FIX002,F841"
+          args: "check . --ignore FIX002,F841" # todo comments, unused rot_mc
+          src: "/home/runner/work/aruco-slam"

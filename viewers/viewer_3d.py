@@ -27,7 +27,7 @@ POSE_POINT_SIZE = 5
 
 DISPLAY_SIZE = 960, 540
 
-VIDEO_NAME = "outputs/output_3d.mp4"
+VIDEO_NAME = "outputs/images/output_3d.mp4"
 
 
 class Viewer3D:
@@ -105,8 +105,15 @@ class Viewer3D:
 
         self.export_video = export_video
         if export_video:
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Use 'mp4v' for MP4 format
-            self.video_writer = cv2.VideoWriter(VIDEO_NAME, fourcc, 20.0, DISPLAY_SIZE)
+            fourcc = cv2.VideoWriter_fourcc(
+                *"mp4v",
+            )  # Use 'mp4v' for MP4 format
+            self.video_writer = cv2.VideoWriter(
+                VIDEO_NAME,
+                fourcc,
+                20.0,
+                DISPLAY_SIZE,
+            )
 
     def close(self) -> None:
         """Destroy the viewer object."""
@@ -170,7 +177,8 @@ class Viewer3D:
         if points_detected.shape != (0,):
             points_detected = points_detected[:, :3].copy()
             points_detected = (
-                points_detected @ np.linalg.inv(camera_rotation) + camera_translation
+                points_detected @ np.linalg.inv(camera_rotation)
+                + camera_translation
             )
             GL.glPointSize(LM_POINT_SIZE * 2)
             GL.glColor4f(214 / 255, 45 / 255, 32 / 255, 0.5)
@@ -179,8 +187,8 @@ class Viewer3D:
         pangolin.FinishFrame()
 
         if self.export_video:
-            pangolin.SaveWindowOnRender("outputs/pangolin")
-            img = cv2.imread("outputs/pangolin.png")
+            pangolin.SaveWindowOnRender("outputs/images/pangolin")
+            img = cv2.imread("outputs/images/pangolin.png")
             self.video_writer.write(img)
 
     def draw_poses(self, poses: list[np.ndarray]) -> None:

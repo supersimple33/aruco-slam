@@ -12,6 +12,7 @@
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dwyl/esta/issues)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 <!-- [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![pydocstyle](https://img.shields.io/badge/pydocstyle-enabled-AD4CD3)](http://www.pydocstyle.org/en/stable/) -->
 
@@ -125,6 +126,8 @@ cd ../..
 python pangolin_setup.py install
 ```
 
+Please ensure that you have properly calibrated your camera.
+
 ## TODOs
 
 - [x] ArUco Detection, Pose Estimation 
@@ -136,8 +139,9 @@ python pangolin_setup.py install
 - [x] Factor Graph
 - [ ] Particle Filter
 - [x] 3D Visualization
-- [ ] Map Saving, Loading
-- [ ] Trajectory Saving
+- [x] Map Saving
+- [ ] Map Loading
+- [x] Trajectory Saving
 - [ ] Ground Truth Comparison
 - [ ] Duplicate Marker ID Handling
 - [ ] Non-Static Landmark Tracking

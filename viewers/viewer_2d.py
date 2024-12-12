@@ -7,7 +7,7 @@ from scipy.spatial.transform import Rotation
 AXIS_SIZE = 0.25
 DISPLAY_SIZE = 960, 540
 
-VIDEO_2D_FNAME = "outputs/output_2d.mp4"
+VIDEO_2D_FNAME = "outputs/images/output_2d.mp4"
 
 
 class Viewer2D:
@@ -33,7 +33,9 @@ class Viewer2D:
 
         self.export_video = export_video
         if export_video:
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Use 'mp4v' for MP4 format
+            fourcc = cv2.VideoWriter_fourcc(
+                *"mp4v",
+            )  # Use 'mp4v' for MP4 format
             self.video_writer = cv2.VideoWriter(
                 VIDEO_2D_FNAME,
                 fourcc,

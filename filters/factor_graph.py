@@ -187,6 +187,18 @@ class FactorGraph:
 
         return camera_pose, lm_translations
 
+    def get_lm_uncertainties(self) -> np.ndarray:
+        """Return the uncertainties of the landmarks."""
+        lm_uncertainties = []
+        for idx in range(self.num_landmarks):
+            key = L(idx)
+            if self.current_estimate.exists(key):
+                lm_uncertainties.append(
+                    self.isam.marginalCovariance(key).diagonal(),
+                )
+
+        return np.array(lm_uncertainties)
+
     def prune_graph(self) -> None:
         """Prune the graph by removing old nodes."""
         # TODO (ssilver): implement a more intelligent, timestep # noqa: TD003
