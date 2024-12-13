@@ -2,6 +2,7 @@
 
 # save to ignore the warning about the sparse matrix format
 import warnings
+from collections import deque
 
 import numpy as np
 import sympy as sp
@@ -13,12 +14,14 @@ warnings.filterwarnings(
     message="splu converted its input to CSC format",
 )
 
+MOVING_AVG_WINDOW = 10
+
 INITIAL_CAMERA_UNCERTAINTY = 0.1
 INITIAL_LANDMARK_UNCERTAINTY = 0.7
 
 R_UNCERTAINTY = 0.9
 Q_UNCERTAINTY_CAM = 0.3
-Q_UNCERTAINTY_LM = 0.0
+Q_UNCERTAINTY_LM = 0.01
 
 CAM_DIMS = 7  # x, y, z, qx, qy, qz, qw
 LM_DIMS = 3  # x, y, z
@@ -46,6 +49,9 @@ class EKF:
         self.h = h
         self.partial_jacobian = dh
 
+        # recording the last couple movement timesteps
+        self.cam_movement = deque(maxlen=MOVING_AVG_WINDOW)
+
     def observe(
         self,
         ids: list[int],
@@ -72,6 +78,10 @@ class EKF:
         self.predict()
         self.update(ids, poses)
 
+        # using the last couple timesteps for motion prediction
+        new_cam_state = self.state[:CAM_DIMS].copy()
+        self.cam_movement.append(new_cam_state)
+
     def get_poses(self) -> tuple[np.ndarray, np.ndarray]:
         """Return the current camera and marker poses."""
         camera_pose = self.state[:CAM_DIMS]
@@ -85,8 +95,16 @@ class EKF:
 
     def predict(self) -> None:
         """Predict the next state of the system."""
-        # no system model, no explicit state change
-        # just update the uncertainity matrix for camera motion
+        # cam_movement avg
+        avg_diff = [0] * CAM_DIMS
+        if len(self.cam_movement) > 0:
+            cam_state_n_ago = self.cam_movement[0]
+            cam_state_diff = self.state[:CAM_DIMS] - cam_state_n_ago
+            avg_diff = cam_state_diff / len(self.cam_movement)
+
+        self.state[:CAM_DIMS] += avg_diff
+
+        # update the uncertainity matrix for camera motion
         q_dims = LM_DIMS * self.num_landmarks + CAM_DIMS
         q = np.zeros((q_dims, q_dims))
         q[:CAM_DIMS, :CAM_DIMS] = np.eye(CAM_DIMS) * Q_UNCERTAINTY_CAM

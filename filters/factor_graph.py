@@ -155,6 +155,8 @@ class FactorGraph:
             camera_pose: the pose of the camera
 
         """
+        # TODO(ssilver): Add moving average model.
+
         self.initial_estimate.insert(
             X(self.i + 1),
             camera_pose,
@@ -201,7 +203,7 @@ class FactorGraph:
 
     def prune_graph(self) -> None:
         """Prune the graph by removing old nodes."""
-        # TODO (ssilver): implement a more intelligent, timestep # noqa: TD003
+        # TODO(ssilver): implement a more intelligent, timestep # noqa: TD003
         # aware way to prune the graph
         self.graph.resize(100)
 

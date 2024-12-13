@@ -25,7 +25,7 @@ LOAD_MAP = False
 MAP_FILE = "outputs/map.txt"
 
 # display flags
-DISPLAY_3D = True
+DISPLAY_3D = False
 DISPLAY_2D = True
 
 # contingent on the display flags

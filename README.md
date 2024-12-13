@@ -35,13 +35,16 @@
 Due to (non-linear) rotations of the camera, a Kalman Filter cannot be used. 
 
 The key components of the Extended Kalman Filter are as follows:
-- **State Vector**: the 3D pose of the camera, along with the 3D position of each ArUco marker (all in the map frame):
-  - $x_{cam}, y_{cam}, z_{cam}, roll_{cam}, pitch_{cam}, yaw_{cam}, x_{m0}, y_{m0}, z_{lm0}, x_{m1}, y_{m1}, z_{m1}, ...$
+- **State Vector**: the 3D pose (tanslation and quaternion) of the camera, along with the 3D position of each ArUco marker (all in the map frame):
+  - $x_{cam}, y_{cam}, z_{cam}, qx_{cam}, qy_{cam}, qz_{cam}, qw_{cam}, x_{m0}, y_{m0}, z_{lm0}, x_{m1}, y_{m1}, z_{m1}, ...$
   - There will be $3n + 6$ dimensions, for $n$ landmarks
 - **Measurement** Vector: the 3D position of each ArUco marker in the camera frame:
   - ${}^{cam}x_{mi},{}^{cam}y_{mi},{}^{cam}z_{mi}$    
-- **State Transition**: since there is no motion model, we only add uncertainty to the camera's state. Since the landmarks are static, we don't modify them at all.
-  - $X_{k|k-1} = X_{k-1|k-1}$
+
+
+- **State Transition**: For the motion model, we use a moving average of the last $n$ displacements to predict the camera's position motion. Since markers are static, we do not update their state:
+  - $X_{k|k-1} = X_{k-1|k-1} + \frac{X_{k-1|k-1} - X_{k-n|k-n}}{n}$
+
 - **Measurement Model**: in order to model what we will measure, we get the displacement between the landmark and the camera positions ($X$), and then rotate it to put it in the camera frame:
   - ${}^{cam}X_{marker} = {}^{cam}R_{map} \cdot ({}^{map}X_{marker} - {}^{map}X_{cam})$
  
@@ -53,7 +56,7 @@ There is an excellent explanation by Cyrill Stachniss for a similar, 2D example 
 <details>
   <summary><strong>Visualization</strong></summary>
   
-![Aruco SLAM](outputs/ekf.gif)
+![Aruco SLAM](outputs/images/ekf.gif)
 </details>
 
 
@@ -79,10 +82,7 @@ camera pose to the landmark that were seen at that time.
 In other words, we can estimate the camera and landmark positions by optimizing 
 the posterior probability.
 
-It should also be noted that, similar to the EKF, the factor graph does not 
-have a motion model. Therefore, the factors connecting sequential camera poses 
-are zero change with high uncertainty, thus weighting the measurements more 
-heavily.
+The factor graph does not currently use a motion model; it simply uses the last position with a large uncertainty. I tried the motion model, but there was a large instability.
 
 My implementation leverages GTSAM with the ISAM2 solver, following the 
 postulation above. It reconstructs the graph at each timestep, maintaining 
@@ -96,7 +96,7 @@ constraints.
 
 This is the same as the gif shown at the top of the README.
   
-![GTSAM Factor Graph](outputs/factorgraph.gif)
+![GTSAM Factor Graph](outputs/images/factorgraph.gif)
 </details>
 
 
@@ -131,7 +131,7 @@ Please ensure that you have properly calibrated your camera.
 ## TODOs
 
 - [x] ArUco Detection, Pose Estimation 
-- [ ] Moving Average Motion Model  
+- [x] Moving Average Motion Model  
 - [x] EKF
 - [x] Quaternions in EKF
 - [ ] UKF
