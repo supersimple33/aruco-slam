@@ -21,7 +21,7 @@ from outputs.trajectory_writer import TrajectoryWriter
 TRAJECTORY_TEXT_FILE = "outputs/trajectory.txt"
 
 # map
-LOAD_MAP = True
+LOAD_MAP = False
 MAP_FILE = "outputs/map.txt"
 
 # display flags
@@ -68,7 +68,7 @@ def main(cmdline_args: argparse.Namespace) -> None:
     calib_matrix, dist_coeffs = load_matrices()
 
     # load the camera matrix and distortion coefficients, initialize the tracker
-    initial_pose = np.array([0, 0, 0, 0, 0, 0])  # x, y, z, roll, pitch, yaw
+    initial_pose = np.array([0, 0, 0, 0, 0, 0, 1])  # x, y, z, qx, qy, qz, qw
     tracker = ArucoSlam(
         initial_pose,
         calib_matrix,

@@ -133,14 +133,14 @@ Please ensure that you have properly calibrated your camera.
 - [x] ArUco Detection, Pose Estimation 
 - [ ] Moving Average Motion Model  
 - [x] EKF
-- [ ] Quaternions, Angle-Wrap Handling in EKF
+- [x] Quaternions in EKF
 - [ ] UKF
 - [ ] Iterative EKF
 - [x] Factor Graph
 - [ ] Particle Filter
 - [x] 3D Visualization
 - [x] Map Saving
-- [ ] Map Loading
+- [x] Map Loading
 - [x] Trajectory Saving
 
 Nice To haves:

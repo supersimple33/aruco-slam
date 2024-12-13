@@ -20,6 +20,8 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
       - name: List directory contents
         run: ls -la
       - name: Ruff-action

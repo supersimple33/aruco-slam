@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from scipy.spatial.transform import Rotation
 from typing_extensions import Self
 
 if TYPE_CHECKING:
@@ -29,7 +28,7 @@ class TrajectoryWriter:
 
     def write(self, timestamp: int, pose: np.ndarray) -> None:
         """Write the pose to the txt file."""
-        quat = Rotation.from_euler("xyz", pose[3:]).as_quat()
+        quat = pose[3:]
 
         seconds = timestamp / 1000
 

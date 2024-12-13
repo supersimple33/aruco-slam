@@ -16,10 +16,11 @@ warnings.filterwarnings(
 INITIAL_CAMERA_UNCERTAINTY = 0.1
 INITIAL_LANDMARK_UNCERTAINTY = 0.7
 
-R_UNCERTAINTY = 0.8
-Q_UNCERTAINTY = 0.3
+R_UNCERTAINTY = 0.9
+Q_UNCERTAINTY_CAM = 0.3
+Q_UNCERTAINTY_LM = 0.0
 
-CAM_DIMS = 6  # x, y, z, roll, pitch, yaw
+CAM_DIMS = 7  # x, y, z, qx, qy, qz, qw
 LM_DIMS = 3  # x, y, z
 XYZ_DIMS = 3
 
@@ -88,7 +89,10 @@ class EKF:
         # just update the uncertainity matrix for camera motion
         q_dims = LM_DIMS * self.num_landmarks + CAM_DIMS
         q = np.zeros((q_dims, q_dims))
-        q[:CAM_DIMS, :CAM_DIMS] = np.eye(CAM_DIMS) * Q_UNCERTAINTY
+        q[:CAM_DIMS, :CAM_DIMS] = np.eye(CAM_DIMS) * Q_UNCERTAINTY_CAM
+        q[CAM_DIMS:, CAM_DIMS:] = (
+            np.eye(LM_DIMS * self.num_landmarks) * Q_UNCERTAINTY_LM
+        )
         self.uncertainty += q
 
     def update(
@@ -117,6 +121,11 @@ class EKF:
         kalman_gain = uncertainty @ dh.T @ s_inv  # kalman gain
         innovation = kalman_gain @ (z - h)
         self.state += innovation
+
+        # normalize the camera's rotation quaternion
+        self.state[XYZ_DIMS:CAM_DIMS] /= np.linalg.norm(
+            self.state[XYZ_DIMS:CAM_DIMS],
+        )
 
         # update uncertainty
         ident = np.eye(LM_DIMS * self.num_landmarks + CAM_DIMS)
@@ -221,14 +230,15 @@ class EKF:
         self.num_landmarks += 1
 
         camera_pose = self.state[:CAM_DIMS]
-        camera_translation = camera_pose[:3]
-        camera_rotation = camera_pose[3:]
+        camera_translation = camera_pose[:XYZ_DIMS]
+        camera_rotation = camera_pose[XYZ_DIMS:]
 
         # TODO(ssilver): this may be wrong, but since all markers # noqa: TD003
         # are added at nearly the zero rotation, a new demo will be needed to
         # test this update the state
-        rot_cm = Rotation.from_euler("xyz", camera_rotation).as_matrix()
-        rot_mc = np.linalg.inv(rot_cm)
+
+        rot_cm = Rotation.from_quat(camera_rotation).as_matrix()
+        rot_cm = np.linalg.inv(rot_cm)
 
         # put the landmark's pose in map frame
         t_ml = rot_cm @ pose[:XYZ_DIMS] + camera_translation
@@ -263,57 +273,31 @@ class EKF:
         """
         # Define translation and rotation variables
         x_mc, y_mc, z_mc = sp.symbols("x_r^m y_r^m z_r^m")
-        phi_mc, theta_mc, psi_mc = sp.symbols("phi_r^m theta_r^m psi_r^m")
+        qx_mc, qy_mc, qz_mc, qw_mc = sp.symbols("qx_mc qy_mc qz_mc qw_mc")
 
         x_ml, y_ml, z_ml = sp.symbols("x_l^m y_l^m z_l^m")
 
-        # using angle from camera to map, not map to camera
-        forward = -1
-
         # Rotation matrices
-        rot_cm_x = sp.Matrix(
-            [
-                [1, 0, 0],
-                [0, sp.cos(forward * phi_mc), -sp.sin(forward * phi_mc)],
-                [0, sp.sin(forward * phi_mc), sp.cos(forward * phi_mc)],
-            ],
-        )
-
-        rot_cm_y = sp.Matrix(
-            [
-                [sp.cos(forward * theta_mc), 0, sp.sin(forward * theta_mc)],
-                [0, 1, 0],
-                [-sp.sin(forward * theta_mc), 0, sp.cos(forward * theta_mc)],
-            ],
-        )
-
-        rot_cm_z = sp.Matrix(
-            [
-                [sp.cos(forward * psi_mc), -sp.sin(forward * psi_mc), 0],
-                [sp.sin(forward * psi_mc), sp.cos(forward * psi_mc), 0],
-                [0, 0, 1],
-            ],
-        )
-
-        # Combine the rotation matrices
-        rot_cm = rot_cm_x @ rot_cm_y @ rot_cm_z
+        rot_mc = sp.Quaternion(qw_mc, qx_mc, qy_mc, qz_mc).to_rotation_matrix()
+        rot_cm = rot_mc.inv()
 
         # Define state vectors
-        x_m_r = sp.Matrix([x_mc, y_mc, z_mc])
-        x_m_l = sp.Matrix([x_ml, y_ml, z_ml])
+        xyz_mc = sp.Matrix([x_mc, y_mc, z_mc])
+        xyz_ml = sp.Matrix([x_ml, y_ml, z_ml])
 
         # Define the function to compute landmark position in camera frame
-        function = rot_cm @ (x_m_l - x_m_r)
+        function = rot_cm @ (xyz_ml - xyz_mc)
 
         variables = sp.Matrix(
             [
-                x_mc,
+                x_mc,  # cam state
                 y_mc,
                 z_mc,
-                phi_mc,
-                theta_mc,
-                psi_mc,
-                x_ml,
+                qx_mc,
+                qy_mc,
+                qz_mc,
+                qw_mc,
+                x_ml,  # landmark state
                 y_ml,
                 z_ml,
             ],

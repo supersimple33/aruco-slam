@@ -122,7 +122,7 @@ class Viewer3D:
 
     def view(
         self,
-        camera_position: np.ndarray,
+        camera_pose: np.ndarray,
         points: list[np.ndarray],
         points_detected: list[np.ndarray],
     ) -> None:
@@ -140,10 +140,8 @@ class Viewer3D:
 
         # Draw camera
         pose = np.eye(4)
-        camera_rotation = (
-            Rotation.from_euler("xyz", camera_position[3:6]).as_matrix().copy()
-        )
-        camera_translation = camera_position[:3].copy()
+        camera_rotation = Rotation.from_quat(camera_pose[3:]).as_matrix().copy()
+        camera_translation = camera_pose[:3].copy()
         pose[:3, :3] = camera_rotation.copy()
         pose[:3, 3] = camera_translation
         self.transform.m = pose

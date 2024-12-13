@@ -175,7 +175,7 @@ class FactorGraph:
     def get_poses(self) -> None:
         """Return the poses of the camera and the landmarks."""
         camera_pose = self.current_estimate.atPose3(X(self.i))
-        camera_rot = camera_pose.rotation().rpy()
+        camera_rot = camera_pose.rotation().toQuaternion().coeffs()
         camera_translation = camera_pose.translation()
         camera_pose = np.hstack((camera_translation, camera_rot))
 
@@ -203,7 +203,7 @@ class FactorGraph:
         """Prune the graph by removing old nodes."""
         # TODO (ssilver): implement a more intelligent, timestep # noqa: TD003
         # aware way to prune the graph
-        self.graph.resize(600)
+        self.graph.resize(100)
 
     def add_marker(
         self,
