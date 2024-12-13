@@ -1,6 +1,6 @@
 
 <div align=center>
-  <img src="outputs/icon.png" width="150" height="150"/>
+  <img src="outputs/images/icon.png" width="150" height="150"/>
 </div>
 
   
@@ -19,7 +19,7 @@
 
   **Using various algorithms to perform SLAM with a monocular camera and visual markers.** 
 
-![Aruco SLAM](outputs/factorgraph.gif)
+![Aruco SLAM](outputs/images/factorgraph.gif)
 </div>
 
 ## About
