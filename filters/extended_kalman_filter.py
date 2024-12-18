@@ -36,7 +36,7 @@ class EKF:
         self.position = initial_camera_pose[:XYZ_DIMS]
         self.rotation = initial_camera_pose[XYZ_DIMS:]
 
-        # 6n + 6, where n is the number of landmarks
+        # 6n + 7, where n is the number of landmarks
         self.state = np.array(initial_camera_pose)
 
         self.uncertainty = np.eye(CAM_DIMS) * INITIAL_CAMERA_UNCERTAINTY
@@ -251,7 +251,7 @@ class EKF:
         camera_translation = camera_pose[:XYZ_DIMS]
         camera_rotation = camera_pose[XYZ_DIMS:]
 
-        # TODO(ssilver): this may be wrong, but since all markers # noqa: TD003
+        # TODO(ssilver): this may be wrong, but since all markers
         # are added at nearly the zero rotation, a new demo will be needed to
         # test this update the state
 

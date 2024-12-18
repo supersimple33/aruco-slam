@@ -126,7 +126,7 @@ class FactorGraph:
         # use last camera pose and zero motion model to add odometry factor
         self.add_odom_factor_and_estimate(camera_pose)
 
-        # TODO(ssilver): historical factors should be present at # noqa: TD003
+        # TODO(ssilver): historical factors should be present at
         # every timestep.
         # Clear graph and add timesteps manually at every timestep?
         if self.historical_timestep:
@@ -203,7 +203,7 @@ class FactorGraph:
 
     def prune_graph(self) -> None:
         """Prune the graph by removing old nodes."""
-        # TODO(ssilver): implement a more intelligent, timestep # noqa: TD003
+        # TODO(ssilver): implement a more intelligent, timestep
         # aware way to prune the graph
         self.graph.resize(100)
 

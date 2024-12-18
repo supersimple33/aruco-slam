@@ -19,7 +19,7 @@
 
   **Using various algorithms to perform SLAM with a monocular camera and visual markers.** 
 
-![Aruco SLAM](outputs/images/factorgraph.gif)
+![Aruco SLAM](outputs/images/output.gif)
 </div>
 
 ## About
@@ -37,7 +37,7 @@ Due to (non-linear) rotations of the camera, a Kalman Filter cannot be used.
 The key components of the Extended Kalman Filter are as follows:
 - **State Vector**: the 3D pose (tanslation and quaternion) of the camera, along with the 3D position of each ArUco marker (all in the map frame):
   - $x_{cam}, y_{cam}, z_{cam}, qx_{cam}, qy_{cam}, qz_{cam}, qw_{cam}, x_{m0}, y_{m0}, z_{lm0}, x_{m1}, y_{m1}, z_{m1}, ...$
-  - There will be $3n + 6$ dimensions, for $n$ landmarks
+  - There will be $3n + 7$ dimensions, for $n$ landmarks
 - **Measurement** Vector: the 3D position of each ArUco marker in the camera frame:
   - ${}^{cam}x_{mi},{}^{cam}y_{mi},{}^{cam}z_{mi}$    
 
@@ -124,6 +124,9 @@ cmake .. -DPython_EXECUTABLE=`which python` -DBUILD_PANGOLIN_FFMPEG=OFF
 make -j8
 cd ../..
 python pangolin_setup.py install
+cd filterpy
+python setup.py install
+cd ../..
 ```
 
 Please ensure that you have properly calibrated your camera.
@@ -131,7 +134,7 @@ Please ensure that you have properly calibrated your camera.
 ## TODOs
 
 - [x] ArUco Detection, Pose Estimation 
-- [x] Moving Average Motion Model  
+- [x] Moving Average Motion Model (EKF)
 - [x] EKF
 - [x] Quaternions in EKF
 - [ ] UKF

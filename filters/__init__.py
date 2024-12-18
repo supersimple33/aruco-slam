@@ -1,5 +1,9 @@
 """init file."""
 
-__all__ = ["extended_kalman_filter", "factor_graph"]
+__all__ = [
+    "extended_kalman_filter",
+    "factor_graph",
+    "unscented_kalman_filter",
+]
 
-from . import extended_kalman_filter, factor_graph
+from . import extended_kalman_filter, factor_graph, unscented_kalman_filter
