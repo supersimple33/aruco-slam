@@ -41,7 +41,7 @@ IMAGE_SIZE = 1920, 1080
 DISPLAY_SIZE = 960, 540
 
 # set numpy to print only 3 decimal places
-np.set_printoptions(precision=3)
+np.set_printoptions(precision=7)
 
 # set numpy to print in scientific notation only if the number is very large
 np.set_printoptions(suppress=True)
@@ -68,7 +68,11 @@ def main(cmdline_args: argparse.Namespace) -> None:
     calib_matrix, dist_coeffs = load_matrices()
 
     # load the camera matrix and distortion coefficients, initialize the tracker
-    initial_pose = np.array([0, 0, 0, 0, 0, 0, 1])  # x, y, z, qx, qy, qz, qw
+    initial_pose = np.array(
+        # x, y, z, qw, qx, qy, qz, ex, ey, ez
+        [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+    )
+    # initial_pose = np.array([0, 0, 0, 1, 0, 0, 0])
     tracker = ArucoSlam(
         initial_pose,
         calib_matrix,

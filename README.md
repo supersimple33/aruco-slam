@@ -32,12 +32,22 @@
 
 ## Extended Kalman Filter:
 
+#### With an MEKF for orientation.
+
 Due to (non-linear) rotations of the camera, a Kalman Filter cannot be used. 
+
+Likewise, quaternions are ***not vectors***, so we can't use the additive updates of the EKF. Instead, we will use the Multiplicative EKF (MEKF) in parallel for orientation. You can find the original paper for the MEKF [here](
+  https://ntrs.nasa.gov/api/citations/20040037784/downloads/20040037784.pdf) as well as a great explanation [here](https://matthewhampsey.github.io/blog/2020/07/18/mekf). You'll find below that the orientation is represented by a quaternion and an error quaternion (paramaterized by 3 error parameters).
+
+This implementation very briefly results in some instability. I'm not sure why and I'm debugging it.
 
 The key components of the Extended Kalman Filter are as follows:
 - **State Vector**: the 3D pose (tanslation and quaternion) of the camera, along with the 3D position of each ArUco marker (all in the map frame):
-  - $x_{cam}, y_{cam}, z_{cam}, qx_{cam}, qy_{cam}, qz_{cam}, qw_{cam}, x_{m0}, y_{m0}, z_{lm0}, x_{m1}, y_{m1}, z_{m1}, ...$
-  - There will be $3n + 7$ dimensions, for $n$ landmarks
+  - camera:
+    - $x_{cam}, y_{cam}, z_{cam}, qx_{cam}, qy_{cam}, qz_{cam}, qw_{cam}, ex_{cam}, ey_{cam}, ez_{cam}$
+  - marker $i$:
+    - $x_{mi}, y_{mi}, z_{mi}$
+  - Putting the components together, the state vector will have be $3n + 10$ dimensions, for $n$ landmarks
 - **Measurement** Vector: the 3D position of each ArUco marker in the camera frame:
   - ${}^{cam}x_{mi},{}^{cam}y_{mi},{}^{cam}z_{mi}$    
 
@@ -99,6 +109,15 @@ This is the same as the gif shown at the top of the README.
 ![GTSAM Factor Graph](outputs/images/factorgraph.gif)
 </details>
 
+<!-- 
+## Particle Filter
+
+<div align="center">
+  <img src="
+  https://upload.wikimedia.org/wikipedia/commons/5/51/Particle_filters.gif
+  " width="450" height="300"/>
+  <p><em>Image credit: Wikimedia Commons</em></p>
+</div> -->
 
 ## Orientation Ambiguities
 
@@ -136,7 +155,7 @@ Please ensure that you have properly calibrated your camera.
 - [x] ArUco Detection, Pose Estimation 
 - [x] Moving Average Motion Model (EKF)
 - [x] EKF
-- [x] Quaternions in EKF
+- [ ] Non-Additive Quaternions in EKF (MEKF)
 - [ ] UKF
 - [ ] Iterative EKF
 - [x] Factor Graph
@@ -145,11 +164,13 @@ Please ensure that you have properly calibrated your camera.
 - [x] Map Saving
 - [x] Map Loading
 - [x] Trajectory Saving
+- [ ] Partial Angle State
 
 Nice To haves:
 - [ ] Ground Truth Comparison
 - [ ] Duplicate Marker ID Handling
 - [ ] Non-Static Landmark Tracking
+- [ ] Orientation Ambiguity Resolution
 
 ## References
 

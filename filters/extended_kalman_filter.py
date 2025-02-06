@@ -23,9 +23,12 @@ R_UNCERTAINTY = 0.9
 Q_UNCERTAINTY_CAM = 0.3
 Q_UNCERTAINTY_LM = 0.01
 
-CAM_DIMS = 7  # x, y, z, qx, qy, qz, qw
+CAM_DIMS = 10  # x, y, z, qx, qy, qz, qw, ex, ey, ez
+XYZ_DIMS = slice(0, 3)  # x, y, z
+QUAT_DIMS = slice(3, 7)  # qx, qy, qz, qw
+ERROR_DIMS = slice(7, 10)  # ex, ey, ez
+
 LM_DIMS = 3  # x, y, z
-XYZ_DIMS = 3
 
 
 class EKF:
@@ -33,10 +36,10 @@ class EKF:
 
     def __init__(self, initial_camera_pose: np.ndarray) -> None:
         """Initialize filter."""
-        self.position = initial_camera_pose[:XYZ_DIMS]
-        self.rotation = initial_camera_pose[XYZ_DIMS:]
+        self.position = initial_camera_pose[XYZ_DIMS]
+        # self.rotation = initial_camera_pose[]
 
-        # 6n + 7, where n is the number of landmarks
+        # 3n + 10, where n is the number of landmarks
         self.state = np.array(initial_camera_pose)
 
         self.uncertainty = np.eye(CAM_DIMS) * INITIAL_CAMERA_UNCERTAINTY
@@ -79,7 +82,7 @@ class EKF:
         self.update(ids, poses)
 
         # using the last couple timesteps for motion prediction
-        new_cam_state = self.state[:CAM_DIMS].copy()
+        new_cam_state = self.state[XYZ_DIMS].copy()
         self.cam_movement.append(new_cam_state)
 
     def get_poses(self) -> tuple[np.ndarray, np.ndarray]:
@@ -96,13 +99,12 @@ class EKF:
     def predict(self) -> None:
         """Predict the next state of the system."""
         # cam_movement avg
-        avg_diff = [0] * CAM_DIMS
+        avg_diff = [0] * XYZ_DIMS.stop
         if len(self.cam_movement) > 0:
             cam_state_n_ago = self.cam_movement[0]
-            cam_state_diff = self.state[:CAM_DIMS] - cam_state_n_ago
+            cam_state_diff = self.state[XYZ_DIMS] - cam_state_n_ago
             avg_diff = cam_state_diff / len(self.cam_movement)
-
-        self.state[:CAM_DIMS] += avg_diff
+        self.state[XYZ_DIMS] += avg_diff
 
         # update the uncertainity matrix for camera motion
         q_dims = LM_DIMS * self.num_landmarks + CAM_DIMS
@@ -136,14 +138,32 @@ class EKF:
         s = dh @ uncertainty @ dh.T + r  # innovation covariance
 
         s_inv = sparse.linalg.spsolve(s, sparse.eye(s.shape[0], format="csc"))
-        kalman_gain = uncertainty @ dh.T @ s_inv  # kalman gain
+        kalman_gain = uncertainty @ dh.T @ s_inv
         innovation = kalman_gain @ (z - h)
-        self.state += innovation
 
-        # normalize the camera's rotation quaternion
-        self.state[XYZ_DIMS:CAM_DIMS] /= np.linalg.norm(
-            self.state[XYZ_DIMS:CAM_DIMS],
-        )
+        # additive
+        self.state[XYZ_DIMS] += innovation[XYZ_DIMS]
+        self.state[CAM_DIMS:] += innovation[CAM_DIMS:]
+
+        # quaternion multiplication
+        q = self.state[QUAT_DIMS]
+        dq = [1, *innovation[ERROR_DIMS] / 2]  # small angle approximation
+
+        # apply the correction to the acculative quaternion
+        q = Rotation.from_quat(q, scalar_first=True)
+        dq = Rotation.from_quat(dq, scalar_first=True)
+        q = dq * q
+
+        self.state[QUAT_DIMS] = q.as_quat(scalar_first=True)
+        self.state[QUAT_DIMS] /= np.linalg.norm(self.state[QUAT_DIMS])
+
+        self.state[ERROR_DIMS] = [0, 0, 0]
+
+        # TODO: MEKF
+        # - https://apps.dtic.mil/sti/tr/pdf/ADA588831.pdf
+        # - http://arxiv.org/pdf/1107.1119
+        # - https://ntrs.nasa.gov/api/citations/20040037784/downloads/20040037784.pdf
+        # - https://matthewhampsey.github.io/blog/2020/07/18/mekf
 
         # update uncertainty
         ident = np.eye(LM_DIMS * self.num_landmarks + CAM_DIMS)
@@ -183,11 +203,11 @@ class EKF:
 
             # add to the matrices
             if z is None:
-                z = pose[:XYZ_DIMS]  # only looking at translation
+                z = pose[XYZ_DIMS]  # only looking at translation
                 h = h_row
                 dh = jacobian_row
             else:
-                z = np.hstack((z, pose[:XYZ_DIMS]))
+                z = np.hstack((z, pose[XYZ_DIMS]))
                 h = np.hstack((h, h_row))
                 dh = np.vstack((dh, jacobian_row))
 
@@ -209,7 +229,7 @@ class EKF:
             dh: the partial jacobian
 
         """
-        cam_state = self.state[:CAM_DIMS]  # x, y, z, roll, pitch, yaw
+        cam_state = self.state[:CAM_DIMS]  # x, y, z, qw, qx, qy, qz, ex, ey, ez
 
         beginning_index = LM_DIMS * index + CAM_DIMS
 
@@ -248,18 +268,22 @@ class EKF:
         self.num_landmarks += 1
 
         camera_pose = self.state[:CAM_DIMS]
-        camera_translation = camera_pose[:XYZ_DIMS]
-        camera_rotation = camera_pose[XYZ_DIMS:]
+        camera_translation = camera_pose[XYZ_DIMS]
+        camera_rotation = camera_pose[QUAT_DIMS]
 
         # TODO(ssilver): this may be wrong, but since all markers
         # are added at nearly the zero rotation, a new demo will be needed to
         # test this update the state
 
-        rot_cm = Rotation.from_quat(camera_rotation).as_matrix()
-        rot_cm = np.linalg.inv(rot_cm)
+        rot_mc = Rotation.from_quat(
+            camera_rotation,
+            scalar_first=True,
+        ).as_matrix()
+
+        rot_cm = np.linalg.inv(rot_mc)
 
         # put the landmark's pose in map frame
-        t_ml = rot_cm @ pose[:XYZ_DIMS] + camera_translation
+        t_ml = rot_cm @ pose[XYZ_DIMS] + camera_translation
 
         self.state = np.hstack((self.state, t_ml))
 
@@ -292,11 +316,19 @@ class EKF:
         # Define translation and rotation variables
         x_mc, y_mc, z_mc = sp.symbols("x_r^m y_r^m z_r^m")
         qx_mc, qy_mc, qz_mc, qw_mc = sp.symbols("qx_mc qy_mc qz_mc qw_mc")
+        ex_mc, ey_mc, ez_mc = sp.symbols("ex_mc ey_mc ez_mc")
 
         x_ml, y_ml, z_ml = sp.symbols("x_l^m y_l^m z_l^m")
 
+        # error corrected rotation
+        dq = sp.Quaternion(1, ex_mc, ey_mc, ez_mc)
+        q_mc = sp.Quaternion(qw_mc, qx_mc, qy_mc, qz_mc)
+
+        # hamilton product
+        ecq_mc = dq * q_mc
+
         # Rotation matrices
-        rot_mc = sp.Quaternion(qw_mc, qx_mc, qy_mc, qz_mc).to_rotation_matrix()
+        rot_mc = ecq_mc.to_rotation_matrix()
         rot_cm = rot_mc.inv()
 
         # Define state vectors
@@ -311,10 +343,13 @@ class EKF:
                 x_mc,  # cam state
                 y_mc,
                 z_mc,
+                qw_mc,
                 qx_mc,
                 qy_mc,
                 qz_mc,
-                qw_mc,
+                ex_mc,
+                ey_mc,
+                ez_mc,
                 x_ml,  # landmark state
                 y_ml,
                 z_ml,
