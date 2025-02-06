@@ -72,7 +72,7 @@ def main(cmdline_args: argparse.Namespace) -> None:
         # x, y, z, qw, qx, qy, qz, ex, ey, ez
         [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
     )
-    # initial_pose = np.array([0, 0, 0, 1, 0, 0, 0])
+
     tracker = ArucoSlam(
         initial_pose,
         calib_matrix,

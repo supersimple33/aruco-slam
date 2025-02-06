@@ -21,11 +21,12 @@ INITIAL_LANDMARK_UNCERTAINTY = 0.7
 
 R_UNCERTAINTY = 0.9
 Q_UNCERTAINTY_CAM = 0.3
+Q_ERROR_UNCERTAINTY_CAM = 0.5
 Q_UNCERTAINTY_LM = 0.01
 
-CAM_DIMS = 10  # x, y, z, qx, qy, qz, qw, ex, ey, ez
+CAM_DIMS = 10  # x, y, z, qw, qx, qy, qz, ex, ey, ez
 XYZ_DIMS = slice(0, 3)  # x, y, z
-QUAT_DIMS = slice(3, 7)  # qx, qy, qz, qw
+QUAT_DIMS = slice(3, 7)  # qw, qx, qy, qz
 ERROR_DIMS = slice(7, 10)  # ex, ey, ez
 
 LM_DIMS = 3  # x, y, z
@@ -36,9 +37,6 @@ class EKF:
 
     def __init__(self, initial_camera_pose: np.ndarray) -> None:
         """Initialize filter."""
-        self.position = initial_camera_pose[XYZ_DIMS]
-        # self.rotation = initial_camera_pose[]
-
         # 3n + 10, where n is the number of landmarks
         self.state = np.array(initial_camera_pose)
 
@@ -109,7 +107,8 @@ class EKF:
         # update the uncertainity matrix for camera motion
         q_dims = LM_DIMS * self.num_landmarks + CAM_DIMS
         q = np.zeros((q_dims, q_dims))
-        q[:CAM_DIMS, :CAM_DIMS] = np.eye(CAM_DIMS) * Q_UNCERTAINTY_CAM
+        q[XYZ_DIMS, XYZ_DIMS] = np.eye(XYZ_DIMS.stop) * Q_UNCERTAINTY_CAM
+        q[ERROR_DIMS, ERROR_DIMS] = np.eye(3) * Q_ERROR_UNCERTAINTY_CAM
         q[CAM_DIMS:, CAM_DIMS:] = (
             np.eye(LM_DIMS * self.num_landmarks) * Q_UNCERTAINTY_LM
         )
@@ -141,25 +140,25 @@ class EKF:
         kalman_gain = uncertainty @ dh.T @ s_inv
         innovation = kalman_gain @ (z - h)
 
-        # additive
+        # additive update for linear components of the state
         self.state[XYZ_DIMS] += innovation[XYZ_DIMS]
         self.state[CAM_DIMS:] += innovation[CAM_DIMS:]
 
-        # quaternion multiplication
+        # quaternion multiplication for rotational components
         q = self.state[QUAT_DIMS]
         dq = [1, *innovation[ERROR_DIMS] / 2]  # small angle approximation
 
-        # apply the correction to the acculative quaternion
+        # apply the correction to the accumulative quaternion
         q = Rotation.from_quat(q, scalar_first=True)
         dq = Rotation.from_quat(dq, scalar_first=True)
         q = dq * q
 
         self.state[QUAT_DIMS] = q.as_quat(scalar_first=True)
-        self.state[QUAT_DIMS] /= np.linalg.norm(self.state[QUAT_DIMS])
 
+        # explicit reset, but not necessarily needed
         self.state[ERROR_DIMS] = [0, 0, 0]
 
-        # TODO: MEKF
+        # TODO (ssilver): MEKF resources:   # noqa: TD003 FIX002
         # - https://apps.dtic.mil/sti/tr/pdf/ADA588831.pdf
         # - http://arxiv.org/pdf/1107.1119
         # - https://ntrs.nasa.gov/api/citations/20040037784/downloads/20040037784.pdf
@@ -271,9 +270,9 @@ class EKF:
         camera_translation = camera_pose[XYZ_DIMS]
         camera_rotation = camera_pose[QUAT_DIMS]
 
-        # TODO(ssilver): this may be wrong, but since all markers
-        # are added at nearly the zero rotation, a new demo will be needed to
-        # test this update the state
+        # TODO(ssilver): this may be wrong. Since all # noqa: TD003 FIX002
+        # markers are added when the camera has nearly zero rotation,
+        # a new demo will be needed to test this update the state
 
         rot_mc = Rotation.from_quat(
             camera_rotation,

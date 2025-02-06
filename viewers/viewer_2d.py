@@ -69,7 +69,8 @@ class Viewer2D:
 
         """
         rot_mc = Rotation.from_quat(
-            camera_position[3:7], scalar_first=True
+            camera_position[3:7],
+            scalar_first=True,
         ).as_matrix()
 
         ct = camera_position[:3].copy()

@@ -19,7 +19,7 @@
 
   **Using various algorithms to perform SLAM with a monocular camera and visual markers.** 
 
-![Aruco SLAM](outputs/images/output.gif)
+![Aruco SLAM](outputs/images/factorgraph.gif)
 </div>
 
 ## About
@@ -32,14 +32,10 @@
 
 ## Extended Kalman Filter:
 
-#### With an MEKF for orientation.
+#### With a Multiplicative EKF (MEKF) for orientation.
 
-Due to (non-linear) rotations of the camera, a Kalman Filter cannot be used. 
-
-Likewise, quaternions are ***not vectors***, so we can't use the additive updates of the EKF. Instead, we will use the Multiplicative EKF (MEKF) in parallel for orientation. You can find the original paper for the MEKF [here](
-  https://ntrs.nasa.gov/api/citations/20040037784/downloads/20040037784.pdf) as well as a great explanation [here](https://matthewhampsey.github.io/blog/2020/07/18/mekf). You'll find below that the orientation is represented by a quaternion and an error quaternion (paramaterized by 3 error parameters).
-
-This implementation very briefly results in some instability. I'm not sure why and I'm debugging it.
+Likewise, quaternions are ***not vectors***, so we can't use the additive updates of the EKF. Thanks to Michael from Shield AI for pointing this out to me. Instead, we will use the Multiplicative EKF (MEKF) in parallel for orientation. You can find a discussion of it in NASA's [Navigation Filter Best Practices](
+https://ntrs.nasa.gov/api/citations/20180003657/downloads/20180003657.pdf) as well as a great, simple explanation [here](https://matthewhampsey.github.io/blog/2020/07/18/mekf) [4][5]. You'll find below that the orientation is represented by an accumulation quaternion and a small-angle correction parameterized by 3 local attitude errors.
 
 The key components of the Extended Kalman Filter are as follows:
 - **State Vector**: the 3D pose (tanslation and quaternion) of the camera, along with the 3D position of each ArUco marker (all in the map frame):
@@ -65,8 +61,12 @@ There is an excellent explanation by Cyrill Stachniss for a similar, 2D example 
 
 <details>
   <summary><strong>Visualization</strong></summary>
-  
+
+### Vanilla EKF:
 ![Aruco SLAM](outputs/images/ekf.gif)
+
+### MEKF:
+![Aruco SLAM](outputs/images/mekf.gif)
 </details>
 
 
@@ -155,7 +155,7 @@ Please ensure that you have properly calibrated your camera.
 - [x] ArUco Detection, Pose Estimation 
 - [x] Moving Average Motion Model (EKF)
 - [x] EKF
-- [ ] Non-Additive Quaternions in EKF (MEKF)
+- [x] Non-Additive Quaternions in EKF (MEKF)
 - [ ] UKF
 - [ ] Iterative EKF
 - [x] Factor Graph
@@ -164,7 +164,7 @@ Please ensure that you have properly calibrated your camera.
 - [x] Map Saving
 - [x] Map Loading
 - [x] Trajectory Saving
-- [ ] Partial Angle State
+- [ ] Partial, Stable Angle State for Landmarks
 
 Nice To haves:
 - [ ] Ground Truth Comparison
@@ -179,3 +179,7 @@ Nice To haves:
 [2] Dellaert, F., & GTSAM Contributors. (2022, May). *borglab/gtsam* (Version 4.2a8) [Software]. Georgia Tech Borg Lab. https://doi.org/10.5281/zenodo.5794541
 
 [3] uoip. (2018, January 23). Pangolin. GitHub. Retrieved December 6, 2024, from https://github.com/uoip/pangolin
+
+[4] Carpenter, J. R., & D’souza, C. N. (2018). Navigation filter best practices (No. NF1676L-29886).
+
+[5] Hampsey, Matthew. “The Multiplicative Extended Kalman Filter.” Github.io, 2020, matthewhampsey.github.io/blog/2020/07/18/mekf. Accessed 6 Feb. 2025.

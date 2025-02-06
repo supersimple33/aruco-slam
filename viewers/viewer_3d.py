@@ -141,7 +141,7 @@ class Viewer3D:
         # Draw camera
         pose = np.eye(4)
         camera_rotation = (
-            Rotation.from_quat(camera_pose[3:], scalar_first=True)
+            Rotation.from_quat(camera_pose[3:7], scalar_first=True)
             .as_matrix()
             .copy()
         )

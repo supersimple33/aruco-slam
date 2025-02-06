@@ -24,7 +24,7 @@ class FactorGraph:
     def __init__(self, initial_camera_pose: np.ndarray) -> None:
         """Initialize filter."""
         self.position = initial_camera_pose[:3]
-        self.rotation = initial_camera_pose[3:]
+        self.rotation = initial_camera_pose[3:7]
 
         self.prior_noise = gtsam.noiseModel.Diagonal.Sigmas(
             np.array(
@@ -126,8 +126,8 @@ class FactorGraph:
         # use last camera pose and zero motion model to add odometry factor
         self.add_odom_factor_and_estimate(camera_pose)
 
-        # TODO(ssilver): historical factors should be present at
-        # every timestep.
+        # TODO(ssilver): historical factors should be  # noqa: TD003 FIX002
+        #                present at every timestep.
         # Clear graph and add timesteps manually at every timestep?
         if self.historical_timestep:
             for factor in self.historical_factors:
@@ -155,7 +155,7 @@ class FactorGraph:
             camera_pose: the pose of the camera
 
         """
-        # TODO(ssilver): Add moving average model.
+        # TODO(ssilver): Add moving average model. # noqa: TD003 FIX002
 
         self.initial_estimate.insert(
             X(self.i + 1),
@@ -178,6 +178,8 @@ class FactorGraph:
         """Return the poses of the camera and the landmarks."""
         camera_pose = self.current_estimate.atPose3(X(self.i))
         camera_rot = camera_pose.rotation().toQuaternion().coeffs()
+        # x, y, z, w -> w, x, y, z
+        camera_rot = camera_rot[[3, 0, 1, 2]]
         camera_translation = camera_pose.translation()
         camera_pose = np.hstack((camera_translation, camera_rot))
 
@@ -203,7 +205,7 @@ class FactorGraph:
 
     def prune_graph(self) -> None:
         """Prune the graph by removing old nodes."""
-        # TODO(ssilver): implement a more intelligent, timestep
+        # TODO(ssilver): implement using timestep # noqa: TD003 FIX002
         # aware way to prune the graph
         self.graph.resize(100)
 
