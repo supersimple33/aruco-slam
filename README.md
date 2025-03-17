@@ -28,7 +28,7 @@
 
 **SLAM** stands for Simultaneous Localization and Mapping. This means that the system can localize itself in an environment while simultaneously building out its understanding of that environment. This project detects the position and orientation of ArUco markers in a video feed, inserts those markers into a map, and then uses various methods to optimize the estimates for both the camera and marker positions. In the video above, all markers are placed randomly; before the first frame is processed, there is no information about their positions.
 
-**Why is this important?** SLAM is a fundamental problem in robotics and computer vision. It is used in self-driving cars, drones, and augmented reality applications. Will this project be used in any of those applications? Probably not. But it is a fun and challenging problem to work on.
+**Why is this important?** SLAM is a fundamental problem in robotics and computer vision. In fact, Kiva Systems (now Amazon Robotics) uses a marker-based system similar to the one implemented here to localize their robots as they navigate through warehouses.
 
 ## Extended Kalman Filter:
 
@@ -40,7 +40,7 @@ https://ntrs.nasa.gov/api/citations/20180003657/downloads/20180003657.pdf) as we
 The key components of the Extended Kalman Filter are as follows:
 - **State Vector**: the 3D pose (tanslation and quaternion) of the camera, along with the 3D position of each ArUco marker (all in the map frame):
   - camera:
-    - $x_{cam}, y_{cam}, z_{cam}, qx_{cam}, qy_{cam}, qz_{cam}, qw_{cam}, ex_{cam}, ey_{cam}, ez_{cam}$
+    - $x_{cam}, y_{cam}, z_{cam}, qw_{cam}, qx_{cam}, qy_{cam}, qz_{cam}, ex_{cam}, ey_{cam}, ez_{cam}$
   - marker $i$:
     - $x_{mi}, y_{mi}, z_{mi}$
   - Putting the components together, the state vector will have be $3n + 10$ dimensions, for $n$ landmarks
@@ -60,7 +60,7 @@ There is an excellent explanation by Cyrill Stachniss for a similar, 2D example 
   
 
 <details>
-  <summary><strong>Visualization</strong></summary>
+  <summary><strong style="font-size: 1.2em;">Visualization</strong></summary>
 
 ### Vanilla EKF:
 ![Aruco SLAM](outputs/images/ekf.gif)
@@ -102,7 +102,7 @@ constraints.
 `python3 run_slam.py --filter factorgraph`
 
 <details>
-  <summary><strong>Visualization</strong></summary>
+  <summary><strong style="font-size: 1.2em;">Visualization</strong></summary>
 
 This is the same as the gif shown at the top of the README.
   
