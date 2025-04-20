@@ -205,6 +205,6 @@ class ArucoSlam:
                     np.float32,
                 )
 
-                # TODO (ssilver):    # noqa: TD003 FIX002
+                # TODO(ssilver):    # noqa: TD003 FIX002
                 # ensure this is in map frame, not camera frame
                 self.filter.add_marker(id_, pose, uncertainty)

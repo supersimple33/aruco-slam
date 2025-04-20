@@ -1,6 +1,6 @@
 
 <div align=center>
-  <img src="outputs/images/icon.png" width="150" height="150"/>
+  <img src="outputs/images/repo_icon.png" width="150" height="150"/>
 </div>
 
   
@@ -28,17 +28,21 @@
 
 **SLAM** stands for Simultaneous Localization and Mapping. This means that the system can localize itself in an environment while simultaneously building out its understanding of that environment. This project detects the position and orientation of ArUco markers in a video feed, inserts those markers into a map, and then uses various methods to optimize the estimates for both the camera and marker positions. In the video above, all markers are placed randomly; before the first frame is processed, there is no information about their positions.
 
-**Why is this important?** SLAM is a fundamental problem in robotics and computer vision. In fact, Kiva Systems (now Amazon Robotics) uses a marker-based system similar to the one implemented here to localize their robots as they navigate through warehouses.
+**Why is this important?** SLAM is a fundamental problem in robotics and computer vision. Without SLAM, the small errors in odometry (wheels, IMU, etc.) accumulate and become unusable.
+
+**In the real world** many robot companies, including [Kiva Systems/Amazon Robotics](https://en.wikipedia.org/wiki/Amazon_Robotics), use a marker-based system similar to the one implemented in this repo to localize their robots and correct odometry estimates.
 
 ## Extended Kalman Filter:
 
 #### With a Multiplicative EKF (MEKF) for orientation.
 
-Likewise, quaternions are ***not vectors***, so we can't use the additive updates of the EKF. Thanks to Michael from Shield AI for pointing this out to me. Instead, we will use the Multiplicative EKF (MEKF) in parallel for orientation. You can find a discussion of it in NASA's [Navigation Filter Best Practices](
-https://ntrs.nasa.gov/api/citations/20180003657/downloads/20180003657.pdf) as well as a great, simple explanation [here](https://matthewhampsey.github.io/blog/2020/07/18/mekf) [4][5]. You'll find below that the orientation is represented by an accumulation quaternion and a small-angle correction parameterized by 3 local attitude errors.
+We can't use a normal Kalman Filter due to the non-linearity of rotations in the state vector. 
+
+Furthermore, quaternions are ***not vectors***, so we can't use the additive updates of the EKF. Thanks to Michael from Shield AI for pointing this out to me. As such, we an MEKF in parallel for orientation. You can find a discussion of it in [NASA's Navigation Filter Best Practices](
+https://ntrs.nasa.gov/api/citations/20180003657/downloads/20180003657.pdf) as well as a great, simple explanation by  Matthew Hampsey [here](https://matthewhampsey.github.io/blog/2020/07/18/mekf) [4][5]. 
 
 The key components of the Extended Kalman Filter are as follows:
-- **State Vector**: the 3D pose (tanslation and quaternion) of the camera, along with the 3D position of each ArUco marker (all in the map frame):
+- **State Vector**: the 3D pose (tanslation, accumulation quaternion, and a small-angle error vector) of the camera, along with the 3D position of each ArUco marker (all in the map frame):
   - camera:
     - $x_{cam}, y_{cam}, z_{cam}, qw_{cam}, qx_{cam}, qy_{cam}, qz_{cam}, ex_{cam}, ey_{cam}, ez_{cam}$
   - marker $i$:
@@ -56,10 +60,12 @@ The key components of the Extended Kalman Filter are as follows:
  
 There is an excellent explanation by Cyrill Stachniss for a similar, 2D example that can be found [here](https://www.youtube.com/watch?v=X30sEgIws0g) [1].
 
-`python3 run_slam.py --filter ekf`
+`python3 run_slam.py --video input_video.mp4 --filter ekf`
   
+[Visualization of MEKF results](https://github.com/yishaiSilver/aruco-slam/blob/main/outputs/images/mekf.gif)
 
-<details>
+
+<!-- <details>
   <summary><strong style="font-size: 1.2em;">Visualization</strong></summary>
 
 ### Vanilla EKF:
@@ -67,7 +73,7 @@ There is an excellent explanation by Cyrill Stachniss for a similar, 2D example 
 
 ### MEKF:
 ![Aruco SLAM](outputs/images/mekf.gif)
-</details>
+</details> -->
 
 
 ## Factor Graph:
@@ -99,15 +105,23 @@ postulation above. It reconstructs the graph at each timestep, maintaining
 conciseness while also accounting for both the local environment and historical
 constraints.
 
-`python3 run_slam.py --filter factorgraph`
+`python3 run_slam.py --video input_video.mp4 --filter factorgraph`
 
-<details>
+[Visualization of online Factor Graph Results](https://github.com/yishaiSilver/aruco-slam/blob/main/outputs/images/factorgraph.gif)
+
+Factor graphs come with the added benefit of being able to incorporate new measurements to improve prior estimations. While it won't be online/live, we can add all of the frames to the factor graph, optimize, and then extract the results at the end. 
+
+`python3 run_offline.py --video input_video.mp4`
+
+[Visualization of offline Factor Graph Results](https://github.com/yishaiSilver/aruco-slam/blob/main/outputs/images/factorgraph.gif)
+
+<!-- <details>
   <summary><strong style="font-size: 1.2em;">Visualization</strong></summary>
 
 This is the same as the gif shown at the top of the README.
   
 ![GTSAM Factor Graph](outputs/images/factorgraph.gif)
-</details>
+</details> -->
 
 <!-- 
 ## Particle Filter
@@ -150,6 +164,43 @@ cd ../..
 
 Please ensure that you have properly calibrated your camera.
 
+## File Structure
+
+```
+.
+├── aruco_slam.py
+├── run_async.py                      # Main script to run async factor graph SLAM
+├── run_slam.py                       # Main script to run live SLAM
+├── input_video.mp4                   # Input video
+├── calibration
+│   ├── camera_matrix.npy             # Camera intrinsic matrix
+│   ├── charuco_calibration.py        # Script to calibrate camera using images
+│   ├── dist_coeffs.npy               # Camera distortion coefficients
+│   └── images                        # Contains ChArUco board calibration images
+├── filters
+│   ├── extended_kalman_filter.py     # MEKF implementation
+│   └── factor_graph.py               # Factor graph implementation
+├── thirdparty
+│   ├── pangolin/                     # Pangolin library for 3D visualization
+│   └── pangolin_setup.py             # Custom setup script
+├── viewers
+│   ├── viewer_2d.py                  # Viewer/Saver for 2D image
+│   └── viewer_3d.py                  # pangolin-based 3D viewer/saver
+└── outputs
+    ├── images
+    │   ├── create_output_gif.sh      # Bash script to combine/stack videos, convert to gif
+    │   ├── output_2d.mp4             # 2D video (cv2 frame)
+    │   ├── output_3d.mp4             # 3D video (pangolin frame)
+    │   ├── combined.mp4              # Combined video of 2D and 3D outputs
+    │   ├── ekf.gif                   # EKF results (additive quaternion update)
+    │   ├── mekf.gif                  # EKF results (multiplicative update)
+    │   ├── factorgraph.gif           # Factor graph results
+    │   └── pangolin.png              # Pangolin screenshot (single frame for video)
+    ├── map.txt                       # Saved map/landmark locations
+    ├── trajectory.txt                # TUM format trajectory file
+    └── trajectory_writer.py          # Creates the above trajectory.txt
+```
+
 ## TODOs
 
 - [x] ArUco Detection, Pose Estimation 
@@ -171,6 +222,7 @@ Nice To haves:
 - [ ] Duplicate Marker ID Handling
 - [ ] Non-Static Landmark Tracking
 - [ ] Orientation Ambiguity Resolution
+- [ ] ROS Node
 
 ## References
 
@@ -182,4 +234,4 @@ Nice To haves:
 
 [4] Carpenter, J. R., & D’souza, C. N. (2018). Navigation filter best practices (No. NF1676L-29886).
 
-[5] Hampsey, Matthew. “The Multiplicative Extended Kalman Filter.” Github.io, 2020, matthewhampsey.github.io/blog/2020/07/18/mekf. Accessed 6 Feb. 2025.
+[5] Hampsey, Matthew. “The Multiplicative Extended Kalman Filter.” Github.io, 2020, [https://matthewhampsey.github.io/blog/2020/07/18/mekf](https://matthewhampsey.github.io/blog/2020/07/18/mekf). Accessed 6 Feb. 2025.

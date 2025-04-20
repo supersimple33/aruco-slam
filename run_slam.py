@@ -106,7 +106,6 @@ def main(cmdline_args: argparse.Namespace) -> None:
             ret, frame = cap.read()
             if not ret:
                 break
-            timestamp = cap.get(cv2.CAP_PROP_POS_MSEC)
 
             frame = cv2.resize(frame, IMAGE_SIZE)
 
@@ -116,6 +115,7 @@ def main(cmdline_args: argparse.Namespace) -> None:
             )
 
             # save txt file
+            timestamp = cap.get(cv2.CAP_PROP_POS_MSEC)
             cam_traj_writer.write(timestamp, camera_pose)
 
             if DISPLAY_3D:

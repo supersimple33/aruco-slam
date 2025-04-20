@@ -12,9 +12,9 @@ import cv2
 import numpy as np
 import tqdm
 
+import aruco_slam
 import viewers.viewer_2d as v2d
 import viewers.viewer_3d as v3d
-from aruco_slam import ArucoSlam
 from outputs.trajectory_writer import TrajectoryWriter
 
 # output files
@@ -63,7 +63,7 @@ def load_matrices() -> tuple[np.ndarray, np.ndarray]:
     return calib_matrix, dist_coeffs
 
 
-def main(cmdline_args: argparse.Namespace) -> None:
+def main(cmdline_args: argparse.Namespace) -> None:  # noqa: C901
     """Run main thread."""
     calib_matrix, dist_coeffs = load_matrices()
 
@@ -73,11 +73,11 @@ def main(cmdline_args: argparse.Namespace) -> None:
         [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
     )
 
-    tracker = ArucoSlam(
+    tracker = aruco_slam.ArucoSlam(
         initial_pose,
         calib_matrix,
         dist_coeffs,
-        cmdline_args.filter,
+        aruco_slam.FACTOR_GRAPH,
         MAP_FILE if LOAD_MAP else None,
     )
 
@@ -100,39 +100,51 @@ def main(cmdline_args: argparse.Namespace) -> None:
         unit="frames",
     )
 
+    detections = []
+    while True:
+        iterator.update(1)
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        frame = cv2.resize(frame, IMAGE_SIZE)
+
+        # find markers, update system state
+        frame, _, _, detected_poses = tracker.process_frame(frame)
+        detections.append(detected_poses)
+
+    # replay the whole video
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+    iterator.reset()
     with TrajectoryWriter(TRAJECTORY_TEXT_FILE) as cam_traj_writer:
-        while True:
-            iterator.update(1)
+        for i in iterator:
             ret, frame = cap.read()
             if not ret:
                 break
-            timestamp = cap.get(cv2.CAP_PROP_POS_MSEC)
 
             frame = cv2.resize(frame, IMAGE_SIZE)
 
             # find markers, update system state
-            frame, camera_pose, marker_poses, detected_poses = (
-                tracker.process_frame(frame)
-            )
+            # TODO(ssilver): implement get_estimate(i) # noqa: TD003 FIX002
+            frame, camera_pose, marker_poses, _ = tracker.get_estimate(frame)
 
             # save txt file
+            timestamp = cap.get(cv2.CAP_PROP_POS_MSEC)
             cam_traj_writer.write(timestamp, camera_pose)
 
+            if DISPLAY_2D:
+                image_viewer_2d.view(
+                    frame,
+                    camera_pose,
+                    marker_poses,
+                    detections[i],
+                )
             if DISPLAY_3D:
                 camera_viewer_3d.view(
                     camera_pose,
                     marker_poses,
-                    detected_poses,
+                    detections[i],
                 )
-            if DISPLAY_2D:
-                q = image_viewer_2d.view(
-                    frame,
-                    camera_pose,
-                    marker_poses,
-                    detected_poses,
-                )
-                if q:
-                    break
 
     tracker.save_map("outputs/map.txt")
 
@@ -152,12 +164,6 @@ if __name__ == "__main__":
         type=str,
         help="Path to video file",
         default="input_video.mp4",
-    )
-    parser.add_argument(
-        "--filter",
-        type=str,
-        help="Filter to use (ekf, factorgraph)",
-        default="ekf",
     )
 
     args = parser.parse_args()
