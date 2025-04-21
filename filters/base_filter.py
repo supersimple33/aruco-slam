@@ -127,11 +127,15 @@ class BaseFilter:
     def process_frame(
         self,
         frame: np.ndarray,
+        should_filter: bool = True,  # noqa: FBT001 FBT002
+        iteration: int = 0,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Process a frame.
 
         Arguments:
             frame: the image frame to process.
+            should_filter: whether to filter the poses or not.
+            iteration: the frame iteration for offline retrieval of that pose.
 
         Returns:
             frame: the frame with the markers drawn on it.
@@ -149,9 +153,14 @@ class BaseFilter:
 
             detected_poses = self.estimate_pose_of_markers(corners, 0.2)
 
-            self.observe(ids, detected_poses)
+            if should_filter:
+                self.observe(ids, detected_poses)
 
-        camera_pose, marker_poses = self.get_poses()
+        if should_filter:
+            camera_pose, marker_poses = self.get_poses()
+        else:
+            _, marker_poses = self.get_poses()
+            camera_pose = self.get_cam_estimate(iteration)
 
         return frame, camera_pose, marker_poses, detected_poses
 
@@ -253,6 +262,20 @@ class BaseFilter:
 
         Returns:
             lm_estimates: the estimates of the landmarks.
+
+        """
+        raise NotImplementedError(NOT_IMPLEMENTED_ERROR)
+
+    def get_cam_estimate(self, iteration: int) -> np.ndarray:
+        """Get the pose estimate at a specific timestamp/iteration.
+
+        Should only be used for offline processing (FaCTOR_GRAPH).
+
+        Arguments:
+            iteration: the id of the landmark
+
+        Returns:
+            The pose of the landmark in the map frame.
 
         """
         raise NotImplementedError(NOT_IMPLEMENTED_ERROR)

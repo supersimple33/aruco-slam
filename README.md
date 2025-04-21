@@ -36,7 +36,6 @@ https://github.com/user-attachments/assets/95684a48-f09f-4a3d-9fbf-21ef9720885b
 ## Extended Kalman Filter:
 
 #### With a Multiplicative EKF (MEKF) for orientation.
-https://github.com/yishaiSilver/aruco-slam
 We can't use a normal Kalman Filter due to the non-linearity of rotations in the state vector. 
 
 Furthermore, quaternions are ***not vectors***, so we can't use the additive updates of the EKF. Thanks to Michael from Shield AI for pointing this out to me. As such, we an MEKF in parallel for orientation. You can find a discussion of it in [NASA's Navigation Filter Best Practices](
@@ -171,7 +170,7 @@ Please ensure that you have properly calibrated your camera.
 .
 ├── input_video.mp4                  # Input video
 ├── main
-│   ├── run_offline.py                 # Script to run async factor graph SLAM
+│   ├── run_offline.py               # Script to run async factor graph SLAM
 │   └── run_slam.py                  # Script to run live SLAM
 ├── calibration
 │   ├── camera_matrix.npy            # Camera intrinsic matrix
@@ -207,6 +206,7 @@ Please ensure that you have properly calibrated your camera.
 
 - [x] ArUco Detection, Pose Estimation 
 - [x] Moving Average Motion Model (EKF)
+- [x] Filters All The Way Down Motion Model
 - [x] EKF
 - [x] Non-Additive Quaternions in EKF (MEKF)
 - [ ] UKF

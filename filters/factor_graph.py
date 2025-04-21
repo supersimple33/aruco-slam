@@ -9,12 +9,12 @@ from scipy.spatial.transform import Rotation
 from filters.base_filter import BaseFilter
 
 # Uncertainty values
-PRIOR_NOISE_XYZ = 1.0  # meters
-PRIOR_NOISE_RPY = 20 * np.pi / 180  # degrees -> radians
-ODOM_NOISE_XYZ = 1.0  # meters
-ODOM_NOISE_RPY = 60 * np.pi / 180  # degrees -> radians
-MEASUREMENT_NOISE_XYZ = 1.0  # meters
-MEASUREMENT_NOISE_RPY = 30 * np.pi / 180  # degrees -> radians
+PRIOR_NOISE_XYZ = 0.1  # meters
+PRIOR_NOISE_RPY = 5 * np.pi / 180  # degrees -> radians
+ODOM_NOISE_XYZ = 0.5  # meters
+ODOM_NOISE_RPY = 10 * np.pi / 180  # degrees -> radians
+MEASUREMENT_NOISE_XYZ = 1.5  # meters
+MEASUREMENT_NOISE_RPY = 20 * np.pi / 180  # degrees -> radians
 
 HISTORICAL_FREQUENCY = 10
 SLIDING_WINDOW_SIZE = 3
@@ -70,20 +70,24 @@ class FactorGraph(BaseFilter):
         )
 
         self.graph = gtsam.NonlinearFactorGraph()
+        # TODO(ssilver): add param for keep/no keep # noqa: TD003 FIX002
+        self.full_graph = gtsam.NonlinearFactorGraph()
+
         self.initial_estimate = gtsam.Values()
         self.current_estimate = gtsam.Values()
         self.isam = gtsam.ISAM2()
 
-        self.graph.add(
-            gtsam.PriorFactorPose3(
-                X(0),
-                Pose3(
-                    Rot3.Rodrigues(self.rotation),
-                    Point3(self.position),
-                ),
-                self.prior_noise,
+        prior_factor = gtsam.PriorFactorPose3(
+            X(0),
+            Pose3(
+                Rot3.Rodrigues(self.rotation),
+                Point3(self.position),
             ),
+            self.prior_noise,
         )
+
+        self.graph.add(prior_factor)
+        self.full_graph.add(prior_factor)
 
         # add the inital pose to the estimates
         pose = Pose3(
@@ -130,19 +134,12 @@ class FactorGraph(BaseFilter):
         # use last camera pose and zero motion model to add odometry factor
         self.add_odom_factor_and_estimate(camera_pose)
 
-        # TODO(ssilver): historical factors should be  # noqa: TD003 FIX002
-        #                present at every timestep.
-        # Clear graph and add timesteps manually at every timestep?
-        if self.historical_timestep:
-            for factor in self.historical_factors:
-                self.graph.push_back(factor)
-
         # don't optimize on the first iteration
         if self.i == 0:
             self.current_estimate = self.initial_estimate
         else:
             self.isam.update(self.graph, self.initial_estimate)
-            self.current_estimate = self.isam.calculateEstimate()
+            self.current_estimate = self.isam.calculateBestEstimate()
             self.initial_estimate.clear()
 
         self.i += 1
@@ -166,17 +163,18 @@ class FactorGraph(BaseFilter):
             camera_pose,
         )
 
-        self.graph.push_back(
-            gtsam.BetweenFactorPose3(
-                X(self.i + 1),
-                X(self.i),
-                Pose3(
-                    Rot3.Rodrigues([0, 0, 0]),
-                    Point3(0, 0, 0),
-                ),
-                self.odom_noise,
+        odom_factor = gtsam.BetweenFactorPose3(
+            X(self.i + 1),
+            X(self.i),
+            Pose3(
+                Rot3.Rodrigues([0, 0, 0]),
+                Point3(0, 0, 0),
             ),
+            self.odom_noise,
         )
+
+        self.graph.push_back(odom_factor)
+        self.full_graph.push_back(odom_factor)
 
     def get_poses(self) -> None:
         """Return the poses of the camera and the landmarks."""
@@ -286,6 +284,7 @@ class FactorGraph(BaseFilter):
 
         # add the observation to the graph
         self.graph.push_back(factor)
+        self.full_graph.push_back(factor)
 
         if self.historical_timestep:
             self.historical_factors.append(factor)
@@ -293,3 +292,41 @@ class FactorGraph(BaseFilter):
     def get_lm_estimates(self) -> np.ndarray:
         """Return the estimates of the landmarks."""
         return self.landmarks.items()
+
+    def get_cam_estimate(self, iteration: int) -> np.ndarray:
+        """Get the pose estimate at a specific timestamp/iteration.
+
+        Arguments:
+            iteration: the id of the landmark
+
+        Returns:
+            The pose of the landmark in the map frame.
+
+        """
+        camera_pose = self.current_estimate.atPose3(X(iteration))
+        camera_rot = camera_pose.rotation().toQuaternion().coeffs()
+        # x, y, z, w -> w, x, y, z
+        camera_rot = camera_rot[[3, 0, 1, 2]]
+        camera_translation = camera_pose.translation()
+
+        return np.hstack((camera_translation, camera_rot))
+
+    def batch_optimize(self) -> None:
+        """Perform a full batch optimization on the entire factor graph."""
+        params = gtsam.LevenbergMarquardtParams()
+        # You can tweak parameters here if you want:
+        params.setVerbosityLM("SUMMARY")  # Optional: print optimization steps
+
+        # Increase maximum iterations and tighten convergence tolerances
+        params.setMaxIterations(200)
+        params.setRelativeErrorTol(1e-9)
+        params.setAbsoluteErrorTol(1e-9)
+
+        optimizer = gtsam.LevenbergMarquardtOptimizer(
+            self.full_graph,
+            self.current_estimate,  # Use the latest estimate from ISAM
+            params,
+        )
+        result = optimizer.optimize()
+
+        self.current_estimate = result
