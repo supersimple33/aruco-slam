@@ -19,7 +19,8 @@
 
   **Using various algorithms to perform SLAM with a monocular camera and visual markers.** 
 
-![Aruco SLAM](outputs/images/factorgraph.gif)
+https://github.com/user-attachments/assets/95684a48-f09f-4a3d-9fbf-21ef9720885b
+<!-- ![Aruco SLAM](outputs/images/factorgraph.gif) -->
 </div>
 
 ## About
@@ -35,7 +36,7 @@
 ## Extended Kalman Filter:
 
 #### With a Multiplicative EKF (MEKF) for orientation.
-
+https://github.com/yishaiSilver/aruco-slam
 We can't use a normal Kalman Filter due to the non-linearity of rotations in the state vector. 
 
 Furthermore, quaternions are ***not vectors***, so we can't use the additive updates of the EKF. Thanks to Michael from Shield AI for pointing this out to me. As such, we an MEKF in parallel for orientation. You can find a discussion of it in [NASA's Navigation Filter Best Practices](
