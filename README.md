@@ -60,7 +60,7 @@ The key components of the Extended Kalman Filter are as follows:
  
 There is an excellent explanation by Cyrill Stachniss for a similar, 2D example that can be found [here](https://www.youtube.com/watch?v=X30sEgIws0g) [1].
 
-`python3 run_slam.py --video input_video.mp4 --filter ekf`
+`python3 -m main.run_slam --video input_video.mp4 --filter ekf`
   
 [Visualization of MEKF results](https://github.com/yishaiSilver/aruco-slam/blob/main/outputs/images/mekf.gif)
 
@@ -105,15 +105,15 @@ postulation above. It reconstructs the graph at each timestep, maintaining
 conciseness while also accounting for both the local environment and historical
 constraints.
 
-`python3 run_slam.py --video input_video.mp4 --filter factorgraph`
+`python3 -m main.run_slam --video input_video.mp4 --filter factorgraph`
 
 [Visualization of online Factor Graph Results](https://github.com/yishaiSilver/aruco-slam/blob/main/outputs/images/factorgraph.gif)
 
-Factor graphs come with the added benefit of being able to incorporate new measurements to improve prior estimations. While it won't be online/live, we can add all of the frames to the factor graph, optimize, and then extract the results at the end. 
+<!-- Factor graphs come with the added benefit of being able to incorporate new measurements to improve prior estimations. While it won't be online/live, we can add all of the frames to the factor graph, optimize, and then extract the results at the end. 
 
-`python3 run_offline.py --video input_video.mp4`
+`python3 -m run_offline.py --video input_video.mp4`
 
-[Visualization of offline Factor Graph Results](https://github.com/yishaiSilver/aruco-slam/blob/main/outputs/images/factorgraph.gif)
+[Visualization of offline Factor Graph Results](https://github.com/yishaiSilver/aruco-slam/blob/main/outputs/images/factorgraph.gif) -->
 
 <!-- <details>
   <summary><strong style="font-size: 1.2em;">Visualization</strong></summary>
@@ -168,37 +168,38 @@ Please ensure that you have properly calibrated your camera.
 
 ```
 .
-├── aruco_slam.py
-├── run_async.py                      # Main script to run async factor graph SLAM
-├── run_slam.py                       # Main script to run live SLAM
-├── input_video.mp4                   # Input video
+├── input_video.mp4                  # Input video
+├── main
+│   ├── run_offline.py                 # Script to run async factor graph SLAM
+│   └── run_slam.py                  # Script to run live SLAM
 ├── calibration
-│   ├── camera_matrix.npy             # Camera intrinsic matrix
-│   ├── charuco_calibration.py        # Script to calibrate camera using images
-│   ├── dist_coeffs.npy               # Camera distortion coefficients
-│   └── images                        # Contains ChArUco board calibration images
+│   ├── camera_matrix.npy            # Camera intrinsic matrix
+│   ├── charuco_calibration.py       # Script to calibrate camera using images
+│   ├── dist_coeffs.npy              # Camera distortion coefficients
+│   └── images                       # Contains ChArUco-board calibration images
 ├── filters
-│   ├── extended_kalman_filter.py     # MEKF implementation
-│   └── factor_graph.py               # Factor graph implementation
+│   ├── base_filter.py               # Base class, marker detection, map saving/loading
+│   ├── extended_kalman_filter.py    # MEKF implementation
+│   └── factor_graph.py              # Factor graph implementation
 ├── thirdparty
-│   ├── pangolin/                     # Pangolin library for 3D visualization
-│   └── pangolin_setup.py             # Custom setup script
+│   ├── pangolin/                    # Pangolin library for 3D visualization
+│   └── pangolin_setup.py            # Custom setup script
 ├── viewers
-│   ├── viewer_2d.py                  # Viewer/Saver for 2D image
-│   └── viewer_3d.py                  # pangolin-based 3D viewer/saver
+│   ├── viewer_2d.py                 # Viewer/Saver for 2D image
+│   └── viewer_3d.py                 # pangolin-based 3D viewer/saver
 └── outputs
     ├── images
-    │   ├── create_output_gif.sh      # Bash script to combine/stack videos, convert to gif
-    │   ├── output_2d.mp4             # 2D video (cv2 frame)
-    │   ├── output_3d.mp4             # 3D video (pangolin frame)
-    │   ├── combined.mp4              # Combined video of 2D and 3D outputs
-    │   ├── ekf.gif                   # EKF results (additive quaternion update)
-    │   ├── mekf.gif                  # EKF results (multiplicative update)
-    │   ├── factorgraph.gif           # Factor graph results
-    │   └── pangolin.png              # Pangolin screenshot (single frame for video)
-    ├── map.txt                       # Saved map/landmark locations
-    ├── trajectory.txt                # TUM format trajectory file
-    └── trajectory_writer.py          # Creates the above trajectory.txt
+    │   ├── create_output_gif.sh     # Bash script to combine videos, convert to gif
+    │   ├── output_2d.mp4            # 2D video (cv2 frame)
+    │   ├── output_3d.mp4            # 3D video (pangolin frame)
+    │   ├── combined.mp4             # Combined video of 2D and 3D outputs
+    │   ├── ekf.gif                  # EKF results (additive quaternion update)
+    │   ├── mekf.gif                 # EKF results (multiplicative update)
+    │   ├── factorgraph.gif          # Factor graph results
+    │   └── pangolin.png             # Pangolin screenshot (single frame for video)
+    ├── map.txt                      # Saved map/landmark locations
+    ├── trajectory.txt               # TUM format trajectory file
+    └── trajectory_writer.py         # Creates the above trajectory.txt
 ```
 
 ## TODOs

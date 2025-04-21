@@ -9,6 +9,8 @@ import sympy as sp
 from scipy import sparse
 from scipy.spatial.transform import Rotation
 
+from filters.base_filter import BaseFilter
+
 warnings.filterwarnings(
     "ignore",
     message="splu converted its input to CSC format",
@@ -32,11 +34,14 @@ ERROR_DIMS = slice(7, 10)  # ex, ey, ez
 LM_DIMS = 3  # x, y, z
 
 
-class EKF:
+class EKF(BaseFilter):
     """Object for tracking the positions of the cameras and landmarks."""
 
     def __init__(self, initial_camera_pose: np.ndarray) -> None:
         """Initialize filter."""
+        # TODO(ssilver): add map loading functionality # noqa: TD003 FIX002
+        super().__init__(initial_camera_pose, None)
+
         # 3n + 10, where n is the number of landmarks
         self.state = np.array(initial_camera_pose)
 
@@ -364,3 +369,7 @@ class EKF:
 
         # return the lambdas
         return h, dh
+
+    def get_lm_estimates(self) -> np.ndarray:
+        """Return the estimates of the landmarks."""
+        return self.landmarks.items()

@@ -7,23 +7,26 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from filters.extended_kalman_filter import EKF
-from filters.factor_graph import FactorGraph
+# calibration files
+CALIB_MTX_FILE = "calibration/camera_matrix.npy"
+DIST_COEFFS_FILE = "calibration/dist_coeffs.npy"
 
 # Filter types
 KALMAN_FILTER = "ekf"
 FACTOR_GRAPH = "factorgraph"
 
+NOT_IMPLEMENTED_ERROR = """
+                        This method is not implemented in the base class and
+                        should be implemented in a subclass.
+                        """
 
-class ArucoSlam:
+
+class BaseFilter:
     """Class for performing SLAM with ArUco markers."""
 
     def __init__(
         self,
         initial_pose: np.ndarray,
-        calib_matrix: np.ndarray,
-        dist_coeffs: np.ndarray,
-        filter_type: str,
         map_file: str | None,
     ) -> None:
         """Initialize the slam object.
@@ -36,17 +39,20 @@ class ArucoSlam:
             map_file: the file to load the map from
 
         """
+        # assert that the camera matrix and distortion coefficients are saved
+        if not Path(CALIB_MTX_FILE).exists():
+            msg = "Camera matrix not found. Run calibration.py first."
+            raise FileNotFoundError(msg)
+        if not Path(DIST_COEFFS_FILE).exists():
+            msg = "Distortion coefficients not found. Run calibration.py first."
+            raise FileNotFoundError(msg)
+
+        calib_matrix = np.load(CALIB_MTX_FILE)
+        dist_coeffs = np.load(DIST_COEFFS_FILE)
+
         self.calib_matrix = calib_matrix
         self.dist_coeffs = dist_coeffs
         self.detector = self.init_aruco_detector()
-
-        if filter_type == KALMAN_FILTER:
-            self.filter = EKF(initial_pose)
-        elif filter_type == FACTOR_GRAPH:
-            self.filter = FactorGraph(initial_pose)
-        else:
-            error_message = "Invalid filter type. Use -h for help."
-            raise ValueError(error_message)
 
         self.camera_pose = initial_pose
 
@@ -143,9 +149,9 @@ class ArucoSlam:
 
             detected_poses = self.estimate_pose_of_markers(corners, 0.2)
 
-            self.filter.observe(ids, detected_poses)
+            self.observe(ids, detected_poses)
 
-        camera_pose, marker_poses = self.filter.get_poses()
+        camera_pose, marker_poses = self.get_poses()
 
         return frame, camera_pose, marker_poses, detected_poses
 
@@ -156,11 +162,11 @@ class ArucoSlam:
             filename: the name of the file to save the map to.
 
         """
-        _, marker_poses = self.filter.get_poses()
+        _, marker_poses = self.get_poses()
 
-        index_to_id = {v: k for k, v in self.filter.landmarks.items()}
+        index_to_id = {v: k for k, v in self.get_lm_estimates()}
 
-        uncertainties = self.filter.get_lm_uncertainties()
+        uncertainties = self.get_lm_uncertainties()
 
         with Path(filename).open("w", encoding="utf-8") as file:
             # write the header:
@@ -208,3 +214,45 @@ class ArucoSlam:
                 # TODO(ssilver):    # noqa: TD003 FIX002
                 # ensure this is in map frame, not camera frame
                 self.filter.add_marker(id_, pose, uncertainty)
+
+    def observe(
+        self,
+        ids: np.ndarray,
+        poses: np.ndarray,
+    ) -> None:
+        """Observe the markers.
+
+        Arguments:
+            ids: the ids of the markers.
+            poses: the poses of the markers.
+
+        """
+        raise NotImplementedError(NOT_IMPLEMENTED_ERROR)
+
+    def get_poses(self) -> tuple[np.ndarray, np.ndarray]:
+        """Get the poses of the camera and the landmarks.
+
+        Returns:
+            camera_pose: the pose of the camera.
+            marker_poses: the poses of the markers.
+
+        """
+        raise NotImplementedError(NOT_IMPLEMENTED_ERROR)
+
+    def get_lm_uncertainties(self) -> np.ndarray:
+        """Get the uncertainties of the landmarks.
+
+        Returns:
+            lm_uncertainties: the uncertainties of the landmarks.
+
+        """
+        raise NotImplementedError(NOT_IMPLEMENTED_ERROR)
+
+    def get_lm_estimates(self) -> np.ndarray:
+        """Get the estimates of the landmarks.
+
+        Returns:
+            lm_estimates: the estimates of the landmarks.
+
+        """
+        raise NotImplementedError(NOT_IMPLEMENTED_ERROR)

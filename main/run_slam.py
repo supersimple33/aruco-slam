@@ -14,8 +14,14 @@ import tqdm
 
 import viewers.viewer_2d as v2d
 import viewers.viewer_3d as v3d
-from aruco_slam import ArucoSlam
+from filters.base_filter import BaseFilter
+from filters.extended_kalman_filter import EKF
+from filters.factor_graph import FactorGraph
 from outputs.trajectory_writer import TrajectoryWriter
+
+# calibration files
+CALIB_MTX_FILE = "calibration/camera_matrix.npy"
+DIST_COEFFS_FILE = "calibration/dist_coeffs.npy"
 
 # output files
 TRAJECTORY_TEXT_FILE = "outputs/trajectory.txt"
@@ -31,10 +37,6 @@ DISPLAY_2D = True
 # contingent on the display flags
 SAVE_2D = False
 SAVE_3D = False
-
-# calibration files
-CALIB_MTX_FILE = "calibration/camera_matrix.npy"
-DIST_COEFFS_FILE = "calibration/dist_coeffs.npy"
 
 # image and display sizes
 IMAGE_SIZE = 1920, 1080
@@ -63,22 +65,28 @@ def load_matrices() -> tuple[np.ndarray, np.ndarray]:
     return calib_matrix, dist_coeffs
 
 
+def init_tracker(filter_type: str, initial_pose: np.ndarray) -> BaseFilter:
+    """Initialize the tracker based on the filter type."""
+    if filter_type == "ekf":
+        return EKF(initial_pose)
+    if filter_type == "factorgraph":
+        return FactorGraph(initial_pose)
+
+    msg = f"Unknown filter type: {filter_type}"
+    raise ValueError(msg)
+
+
 def main(cmdline_args: argparse.Namespace) -> None:
     """Run main thread."""
-    calib_matrix, dist_coeffs = load_matrices()
-
     # load the camera matrix and distortion coefficients, initialize the tracker
     initial_pose = np.array(
         # x, y, z, qw, qx, qy, qz, ex, ey, ez
         [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
     )
 
-    tracker = ArucoSlam(
-        initial_pose,
-        calib_matrix,
-        dist_coeffs,
+    tracker = init_tracker(
         cmdline_args.filter,
-        MAP_FILE if LOAD_MAP else None,
+        initial_pose,
     )
 
     # use the camera
@@ -88,11 +96,7 @@ def main(cmdline_args: argparse.Namespace) -> None:
     if DISPLAY_3D:
         camera_viewer_3d = v3d.Viewer3D(export_video=SAVE_3D)
     if DISPLAY_2D:
-        image_viewer_2d = v2d.Viewer2D(
-            calib_matrix,
-            dist_coeffs,
-            export_video=SAVE_2D,
-        )
+        image_viewer_2d = v2d.Viewer2D(export_video=SAVE_2D)
 
     iterator = tqdm.tqdm(
         range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT))),  # total number of frames
@@ -101,8 +105,7 @@ def main(cmdline_args: argparse.Namespace) -> None:
     )
 
     with TrajectoryWriter(TRAJECTORY_TEXT_FILE) as cam_traj_writer:
-        while True:
-            iterator.update(1)
+        for _ in iterator:
             ret, frame = cap.read()
             if not ret:
                 break

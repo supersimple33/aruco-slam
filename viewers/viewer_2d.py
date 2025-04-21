@@ -1,5 +1,7 @@
 """Module used to display 2D image."""
 
+from pathlib import Path
+
 import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -9,27 +11,35 @@ DISPLAY_SIZE = 960, 540
 
 VIDEO_2D_FNAME = "outputs/images/output_2d.mp4"
 
+# calibration files
+CALIB_MTX_FILE = "calibration/camera_matrix.npy"
+DIST_COEFFS_FILE = "calibration/dist_coeffs.npy"
+
 
 class Viewer2D:
     """Class for displaying 2D image."""
 
     def __init__(
         self,
-        camera_matrix: np.ndarray,
-        dist_coeffs: np.ndarray,
         *,
         export_video: bool,
     ) -> None:
         """Construct.
 
         Arguments:
-            camera_matrix: the camera matrix
-            dist_coeffs: the distortion coefficients
             export_video: whether or not a video should be saved
 
         """
-        self.camera_matrix = camera_matrix
-        self.dist_coeffs = dist_coeffs
+        # assert that the camera matrix and distortion coefficients are saved
+        if not Path(CALIB_MTX_FILE).exists():
+            msg = "Camera matrix not found. Run calibration.py first."
+            raise FileNotFoundError(msg)
+        if not Path(DIST_COEFFS_FILE).exists():
+            msg = "Distortion coefficients not found. Run calibration.py first."
+            raise FileNotFoundError(msg)
+
+        self.camera_matrix = np.load(CALIB_MTX_FILE)
+        self.dist_coeffs = np.load(DIST_COEFFS_FILE)
 
         self.export_video = export_video
         if export_video:

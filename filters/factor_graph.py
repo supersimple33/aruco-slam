@@ -6,6 +6,8 @@ from gtsam import Point3, Pose3, Rot3
 from gtsam.symbol_shorthand import L, X
 from scipy.spatial.transform import Rotation
 
+from filters.base_filter import BaseFilter
+
 # Uncertainty values
 PRIOR_NOISE_XYZ = 1.0  # meters
 PRIOR_NOISE_RPY = 20 * np.pi / 180  # degrees -> radians
@@ -18,11 +20,13 @@ HISTORICAL_FREQUENCY = 10
 SLIDING_WINDOW_SIZE = 3
 
 
-class FactorGraph:
+class FactorGraph(BaseFilter):
     """Factor Graph that tracks the positions of the cameras and landmarks."""
 
     def __init__(self, initial_camera_pose: np.ndarray) -> None:
         """Initialize filter."""
+        super().__init__(initial_camera_pose, None)
+
         self.position = initial_camera_pose[:3]
         self.rotation = initial_camera_pose[3:7]
 
@@ -285,3 +289,7 @@ class FactorGraph:
 
         if self.historical_timestep:
             self.historical_factors.append(factor)
+
+    def get_lm_estimates(self) -> np.ndarray:
+        """Return the estimates of the landmarks."""
+        return self.landmarks.items()
