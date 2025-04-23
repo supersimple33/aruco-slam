@@ -15,6 +15,7 @@ all instances of 'install_dirs' -> 'install_dir'
 python setup.py install
 
 """
+from __future__ import annotations
 
 import cv2
 import numpy as np

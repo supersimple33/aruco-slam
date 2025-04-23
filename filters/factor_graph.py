@@ -1,4 +1,5 @@
 """Defines an EKF class."""
+from __future__ import annotations
 
 import gtsam
 import numpy as np

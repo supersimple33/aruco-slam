@@ -1,4 +1,5 @@
 """Defines an EKF class."""
+from __future__ import annotations
 
 # save to ignore the warning about the sparse matrix format
 import warnings
