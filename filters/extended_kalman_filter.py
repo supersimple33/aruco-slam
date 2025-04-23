@@ -10,7 +10,7 @@ import sympy as sp
 from scipy import sparse
 from scipy.spatial.transform import Rotation
 
-from filters.base_filter import BaseFilter
+from aruco_slam.filters.base_filter import BaseFilter
 
 warnings.filterwarnings(
     "ignore",

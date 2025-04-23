@@ -7,7 +7,7 @@ from gtsam import Point3, Pose3, Rot3
 from gtsam.symbol_shorthand import L, X
 from scipy.spatial.transform import Rotation
 
-from filters.base_filter import BaseFilter
+from aruco_slam.filters.base_filter import BaseFilter
 
 # Uncertainty values
 PRIOR_NOISE_XYZ = 0.1  # meters
