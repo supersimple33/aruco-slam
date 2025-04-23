@@ -18,7 +18,10 @@ python setup.py install
 
 import cv2
 import numpy as np
-import pangolin
+try:
+    import pangolin
+except ImportError:
+    pass
 from OpenGL import GL
 from scipy.spatial.transform import Rotation
 
