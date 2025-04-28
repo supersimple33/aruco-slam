@@ -206,11 +206,10 @@ Please ensure that you have properly calibrated your camera.
 
 - [x] ArUco Detection, Pose Estimation 
 - [x] Moving Average Motion Model (EKF)
-- [x] Filters All The Way Down Motion Model
+- [ ] Filters All The Way Down Motion Model
 - [x] EKF
 - [x] Non-Additive Quaternions in EKF (MEKF)
 - [ ] UKF
-- [ ] Iterative EKF
 - [x] Factor Graph
 - [ ] Particle Filter
 - [x] 3D Visualization

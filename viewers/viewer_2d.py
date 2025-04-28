@@ -91,8 +91,13 @@ class Viewer2D:
 
         # draw the points from the filter
         for p_ml in points:
+            p_ml = p_ml[:3]  # take only the translation part
             p_cl = (p_ml - ct) @ rot_mc
-            frame = self.draw_point(frame, p_cl)
+            try:
+                frame = self.draw_point(frame, p_cl)
+            except cv2.error:
+                # if the point is not visible, skip it
+                continue
 
         frame = cv2.resize(frame, DISPLAY_SIZE)
         cv2.imshow("frame", frame)

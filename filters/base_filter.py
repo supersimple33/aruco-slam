@@ -116,6 +116,15 @@ class BaseFilter:
                 cv2.SOLVEPNP_IPPE_SQUARE,
             )
 
+            # rot, t = cv2.solvePnPRefineLM(
+            #     marker_points,
+            #     c,
+            #     self.calib_matrix,
+            #     self.dist_coeffs,
+            #     rot,
+            #     t,
+            # )
+
             tvecs.append(t.flatten())
             rvecs.append(rot.flatten())
 

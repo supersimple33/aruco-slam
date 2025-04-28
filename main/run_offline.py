@@ -78,7 +78,8 @@ def main(cmdline_args: argparse.Namespace) -> None:  # noqa: C901
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 0)
 
     iterator = tqdm.tqdm(
-        range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT))),  # total number of frames
+        range(500),  # total number of frames
+        # range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT))),  # total number of frames
         desc="Processing frames",
         unit="frames",
     )

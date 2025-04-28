@@ -9,12 +9,19 @@ from scipy.spatial.transform import Rotation
 from filters.base_filter import BaseFilter
 
 # Uncertainty values
-PRIOR_NOISE_XYZ = 0.1  # meters
-PRIOR_NOISE_RPY = 5 * np.pi / 180  # degrees -> radians
-ODOM_NOISE_XYZ = 0.5  # meters
-ODOM_NOISE_RPY = 10 * np.pi / 180  # degrees -> radians
-MEASUREMENT_NOISE_XYZ = 1.5  # meters
-MEASUREMENT_NOISE_RPY = 20 * np.pi / 180  # degrees -> radians
+# PRIOR_NOISE_XYZ = 0.1  # meters
+# PRIOR_NOISE_RPY = 5 * np.pi / 180  # degrees -> radians
+# ODOM_NOISE_XYZ = 0.05  # meters
+# ODOM_NOISE_RPY = 10 * np.pi / 180  # degrees -> radians
+# MEASUREMENT_NOISE_XYZ = 0.05  # meters
+# MEASUREMENT_NOISE_RPY = 20 * np.pi / 180  # degrees -> radians
+
+PRIOR_NOISE_XYZ = 0.0  # meters
+PRIOR_NOISE_RPY = 20 * np.pi / 180  # degrees -> radians
+ODOM_NOISE_XYZ = 0.2  # meters
+ODOM_NOISE_RPY = 60 * np.pi / 180  # degrees -> radians
+MEASUREMENT_NOISE_XYZ = 0.1  # meters
+MEASUREMENT_NOISE_RPY = 300 * np.pi / 180  # degrees -> radians
 
 HISTORICAL_FREQUENCY = 10
 SLIDING_WINDOW_SIZE = 3
@@ -29,6 +36,10 @@ class FactorGraph(BaseFilter):
 
         self.position = initial_camera_pose[:3]
         self.rotation = initial_camera_pose[3:7]
+
+        start_noise = gtsam.noiseModel.Diagonal.Sigmas(
+            np.array([0, 0, 0, 0, 0, 0]),
+        )
 
         self.prior_noise = gtsam.noiseModel.Diagonal.Sigmas(
             np.array(
@@ -83,7 +94,7 @@ class FactorGraph(BaseFilter):
                 Rot3.Rodrigues(self.rotation),
                 Point3(self.position),
             ),
-            self.prior_noise,
+            start_noise,
         )
 
         self.graph.add(prior_factor)
@@ -139,7 +150,9 @@ class FactorGraph(BaseFilter):
             self.current_estimate = self.initial_estimate
         else:
             self.isam.update(self.graph, self.initial_estimate)
-            self.current_estimate = self.isam.calculateBestEstimate()
+            print(self.graph.size())
+            self.current_estimate = self.isam.calculateEstimate()
+            # print(self.isam.__dir__())
             self.initial_estimate.clear()
 
         self.i += 1
@@ -276,7 +289,7 @@ class FactorGraph(BaseFilter):
             X(self.i),
             L(idx),
             Pose3(
-                cam_rot_inv,
+                cam_rot_inv,  # TODO(ssilver): use landmark orientation
                 Point3(pose[:3]),  # landmark in camera frame
             ),
             self.measurement_noise,
