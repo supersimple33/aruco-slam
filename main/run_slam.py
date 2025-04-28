@@ -36,8 +36,8 @@ DISPLAY_3D = True
 DISPLAY_2D = True
 
 # contingent on the display flags
-SAVE_2D = False
-SAVE_3D = False
+SAVE_2D = True
+SAVE_3D = True
 
 # image and display sizes
 IMAGE_SIZE = 1920, 1080

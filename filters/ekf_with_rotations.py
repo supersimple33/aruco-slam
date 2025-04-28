@@ -35,6 +35,8 @@ ERROR_DIMS = slice(7, 10)  # ex, ey, ez
 
 LM_DIMS = 10  # x, y, z
 
+QUAT_THRESHOLD = 1.2
+
 
 class EKF_Rotations(BaseFilter):
     """Object for tracking the positions of the cameras and landmarks."""
@@ -225,11 +227,27 @@ class EKF_Rotations(BaseFilter):
             orientation = Rotation.from_euler(
                 "xyz",
                 pose[3:],
+            ).as_quat(scalar_first=True)
+
+            # get the current orientation
+            lm_i = LM_DIMS * index + CAM_DIMS
+            state_quat = self.state[lm_i + 3 : lm_i + 7]  # qw, qx, qy, qz
+
+            norm = np.linalg.norm(
+                orientation - state_quat,
             )
 
+            # check if the orientation is too different
+            if norm > QUAT_THRESHOLD:
+                # if so, skip this observation
+                print(
+                    f"Skipping landmark {idx} "
+                    f"due to large orientation difference ({norm:.3f})",
+                )
+                continue
             # convert to quaternion
             pose_quat = np.hstack(
-                (pose[XYZ_DIMS], orientation.as_quat(scalar_first=True)),
+                (pose[XYZ_DIMS], orientation),
             )
 
             # add to the matrices
