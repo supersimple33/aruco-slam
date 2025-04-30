@@ -9,17 +9,18 @@ import numpy as np
 
 # ------------------------------
 # ENTER YOUR REQUIREMENTS HERE:
-ARUCO_DICT = cv2.aruco.DICT_5X5_250
-SQUARES_VERTICALLY = 5
-SQUARES_HORIZONTALLY = 7
+ARUCO_DICT = cv2.aruco.DICT_APRILTAG_36h11
+SQUARES_VERTICALLY = 7
+SQUARES_HORIZONTALLY = 5
 SQUARE_LENGTH = 0.03
 MARKER_LENGTH = 0.015
 # ...
-PATH_TO_YOUR_IMAGES = "./images"
+PATH_TO_YOUR_IMAGES = "./images2"
 
 # IMAGE_SIZE = (960, 540)
 IMAGE_SIZE = (1920, 1080)
-DISPLAY_SIZE = (960, 540)
+DISPLAY_SIZE = (640, 360)
+IMAGE_SIZE = (640, 360)
 # ------------------------------
 
 def correct_rotation(image):
@@ -52,8 +53,12 @@ def calibrate_and_save_parameters():
 
         # If at least one marker is detected
         if len(marker_ids) > 5:
-            charuco_retval, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(marker_corners, marker_ids, image, board)
-            if charuco_retval:
+            
+            # charuco_retval, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(marker_corners, marker_ids, image, board)
+            charuco_corners, charuco_ids, marker_corners, marker_ids = detector.detectBoard(image)
+            # charuco_corners, marker_corners = marker_corners, charuco_corners
+            # charuco_ids, marker_ids = marker_ids, charuco_ids
+            if charuco_ids is not None and len(charuco_ids) > 5:
                 all_charuco_corners.append(charuco_corners)
                 all_charuco_ids.append(charuco_ids)
 
