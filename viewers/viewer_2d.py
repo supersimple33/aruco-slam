@@ -78,9 +78,9 @@ class Viewer2D:
         - bool: whether or not the script should terminate
 
         """
+        first_order = camera_position[3:7]
         rot_mc = Rotation.from_quat(
-            camera_position[3:7],
-            scalar_first=True,
+            (first_order[-1], first_order[0], first_order[1], first_order[2]),
         ).as_matrix()
 
         ct = camera_position[:3].copy()
