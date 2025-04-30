@@ -12,8 +12,8 @@ DISPLAY_SIZE = 960, 540
 VIDEO_2D_FNAME = "outputs/images/output_2d.mp4"
 
 # calibration files
-CALIB_MTX_FILE = "calibration/camera_matrix.npy"
-DIST_COEFFS_FILE = "calibration/dist_coeffs.npy"
+CALIB_MTX_FILE = "./calibration/camera_matrix.npy"
+DIST_COEFFS_FILE = "./calibration/dist_coeffs.npy"
 
 
 class Viewer2D:

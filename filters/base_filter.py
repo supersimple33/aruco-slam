@@ -8,8 +8,8 @@ import cv2
 import numpy as np
 
 # calibration files
-CALIB_MTX_FILE = "calibration/camera_matrix.npy"
-DIST_COEFFS_FILE = "calibration/dist_coeffs.npy"
+CALIB_MTX_FILE = "./calibration/camera_matrix.npy"
+DIST_COEFFS_FILE = "./calibration/dist_coeffs.npy"
 
 # Filter types
 KALMAN_FILTER = "ekf"
@@ -28,6 +28,7 @@ class BaseFilter:
         self,
         initial_pose: np.ndarray,
         map_file: str | None,
+        aruco_dict = None
     ) -> None:
         """Initialize the slam object.
 
@@ -52,21 +53,23 @@ class BaseFilter:
 
         self.calib_matrix = calib_matrix
         self.dist_coeffs = dist_coeffs
-        self.detector = self.init_aruco_detector()
+        self.detector = self.init_aruco_detector(aruco_dict)
 
         self.camera_pose = initial_pose
 
         if map_file is not None:
             self.load_map(map_file)
 
-    def init_aruco_detector(self) -> cv2.aruco.ArucoDetector:
+    def init_aruco_detector(self, aruco_dict) -> cv2.aruco.ArucoDetector:
         """Create an aruco detector.
 
         Returns:
             detector: cv2.aruco.ArucoDetector object
 
         """
-        aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_50)
+        if aruco_dict is None:
+            aruco_dict = cv2.aruco.DICT_5X5_50
+        aruco_dict = cv2.aruco.getPredefinedDictionary(aruco_dict)
         aruco_params = cv2.aruco.DetectorParameters()
         aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
         aruco_params.cornerRefinementWinSize = 3

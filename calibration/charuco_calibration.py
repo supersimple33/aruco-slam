@@ -34,6 +34,7 @@ def calibrate_and_save_parameters():
     # Define the aruco dictionary and charuco board
     dictionary = cv2.aruco.getPredefinedDictionary(ARUCO_DICT)
     board = cv2.aruco.CharucoBoard((SQUARES_VERTICALLY, SQUARES_HORIZONTALLY), SQUARE_LENGTH, MARKER_LENGTH, dictionary)
+    detector = cv2.aruco.CharucoDetector(board)
     params = cv2.aruco.DetectorParameters()
 
     # Load PNG images from folder
