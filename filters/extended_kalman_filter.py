@@ -2,8 +2,6 @@
 
 # save to ignore the warning about the sparse matrix format
 import warnings
-from collections import deque
-import time
 
 import numpy as np
 import sympy as sp
@@ -11,7 +9,6 @@ from scipy import sparse
 from scipy.spatial.transform import Rotation
 
 from filters.base_filter import BaseFilter
-# from filters.twist_ekf import TwistMotionModel
 
 warnings.filterwarnings(
     "ignore",
@@ -51,8 +48,6 @@ class EKF(BaseFilter):
 
         self.num_landmarks = 0
         self.landmarks = {}
-
-        # self.twist_model = TwistMotionModel()
 
         # initialize the H and h functions
         h, dh = self.initialize_h()
@@ -98,20 +93,6 @@ class EKF(BaseFilter):
 
     def predict(self) -> None:
         """Predict the next state of the system."""
-        # # cam_movement avg
-        # dt = 1.0 / 30.0  # assuming 30 FPS
-        # twist = self.twist_model.predict(dt)
-        # self.state[XYZ_DIMS] += twist[:3]  # update translation
-
-        # w = twist[3:6]  # angular velocity
-        # # update the quaternion using small angle approximation
-        # dq = [1, *w * dt / 2]  # small angle approximation
-        # q = self.state[QUAT_DIMS]
-        # q = Rotation.from_quat(q, scalar_first=True)
-        # dq = Rotation.from_quat(dq, scalar_first=True)
-        # q = dq * q  # quaternion multiplication
-        # self.state[QUAT_DIMS] = q.as_quat(scalar_first=True)
-
         # update the uncertainity matrix for camera motion
         q_dims = LM_DIMS * self.num_landmarks + CAM_DIMS
         q = np.zeros((q_dims, q_dims))
@@ -314,8 +295,6 @@ class EKF(BaseFilter):
             dh: the jacobian of the h function
 
         """
-        tic = time.time()
-
         # Define translation and rotation variables
         x_mc, y_mc, z_mc = sp.symbols("x_r^m y_r^m z_r^m")
         qx_mc, qy_mc, qz_mc, qw_mc = sp.symbols("qx_mc qy_mc qz_mc qw_mc")
@@ -365,9 +344,6 @@ class EKF(BaseFilter):
 
         # Lambdify the Jacobian
         dh = sp.lambdify([variables], jacobian, modules=["numpy"])
-
-        toc = time.time()
-        print(f"Initialized h and dh in {toc - tic:.4f} seconds ")
 
         # return the lambdas
         return h, dh

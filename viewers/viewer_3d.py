@@ -57,7 +57,7 @@ class Viewer3D:
         GL.glEnable(GL.GL_BLEND)
 
         viewpoint_x = 0 * self.scale
-        viewpoint_y = 3 * self.scale
+        viewpoint_y = -1 * self.scale
         viewpoint_z = -10 * self.scale
         viewpoint_f = 1000
 

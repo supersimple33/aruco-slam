@@ -6,6 +6,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 # calibration files
 CALIB_MTX_FILE = "calibration/camera_matrix.npy"
@@ -19,6 +20,16 @@ NOT_IMPLEMENTED_ERROR = """
                         This method is not implemented in the base class and
                         should be implemented in a subclass.
                         """
+
+
+CAM_DIMS = 10  # x, y, z, qw, qx, qy, qz, ex, ey, ez
+XYZ_DIMS = slice(0, 3)  # x, y, z
+QUAT_DIMS = slice(3, 7)  # qw, qx, qy, qz
+ERROR_DIMS = slice(7, 10)  # ex, ey, ez
+
+LM_DIMS = 10  # x, y, z
+
+QUAT_THRESHOLD = 50
 
 
 class BaseFilter:
@@ -78,6 +89,7 @@ class BaseFilter:
     def estimate_pose_of_markers(
         self,
         corners: np.ndarray,
+        ids: np.ndarray,
         marker_size: float,
     ) -> np.ndarray:
         """Estimate the pose of the markers.
@@ -87,6 +99,7 @@ class BaseFilter:
 
         Arguments:
             corners (np.ndarray): the corners of the markers.
+            ids (np.ndarray): the ids of the markers.
             marker_size (float): the size of the markers.
 
         Returns:
@@ -106,25 +119,46 @@ class BaseFilter:
         tvecs = []
         rvecs = []
 
-        for c in corners:
+        for c, idx in zip(corners, ids):
+            has_prior = False
+            rot_prior = None
+
+            # TODO(ssilver):
+            # the following attempt at orientation ambiguity only works for
+            # ekf_with_rotations, not ekf (no orientation), nor factorgraph
+            # (no state). Leaving it here while I think about it.
+
+            # if idx in self.landmarks:
+            #
+            #     # want to use the existing landmark pose to avoid ambiguity
+            #     lm_index = self.landmarks[idx]
+
+            #     # TODO(ssilver): get rid of all this. And, the code is repeated
+            #     lm_i = LM_DIMS * lm_index + CAM_DIMS
+            #     # get the landmark pose in the map frame
+            #     q_ml = self.state[lm_i + 3 : lm_i + 7]  # qw, qx, qy, qz
+            #     q_mc = self.state[QUAT_DIMS]  # qw, qx, qy, qz
+
+            #     rot_ml = Rotation.from_quat(q_ml, scalar_first=True)
+            #     rot_mc = Rotation.from_quat(q_mc, scalar_first=True)
+
+            #     # convert to camera frame
+            #     rot_cl = rot_ml.inv() * rot_mc
+
+            #     # convert to rotation vector
+            #     rot_prior = rot_cl.as_rotvec()
+
+            #     has_prior = True
+
             _, rot, t = cv2.solvePnP(
                 marker_points,
                 c,
                 self.calib_matrix,
                 self.dist_coeffs,
-                False,  # noqa: FBT003
-                cv2.SOLVEPNP_IPPE_SQUARE,
+                rvec=rot_prior,
+                useExtrinsicGuess=has_prior,
+                flags=cv2.SOLVEPNP_IPPE_SQUARE,
             )
-
-            # rot, t = cv2.solvePnPRefineLM(
-            #     marker_points,
-            #     c,
-            #     self.calib_matrix,
-            #     self.dist_coeffs,
-            #     rot,
-            #     t,
-            # )
-
             tvecs.append(t.flatten())
             rvecs.append(rot.flatten())
 
@@ -160,7 +194,7 @@ class BaseFilter:
             frame = cv2.aruco.drawDetectedMarkers(frame, corners, ids)
             ids = ids.flatten()
 
-            detected_poses = self.estimate_pose_of_markers(corners, 0.2)
+            detected_poses = self.estimate_pose_of_markers(corners, ids, 0.2)
 
             if should_filter:
                 self.observe(ids, detected_poses)
@@ -232,6 +266,59 @@ class BaseFilter:
                 # TODO(ssilver):    # noqa: TD003 FIX002
                 # ensure this is in map frame, not camera frame
                 self.filter.add_marker(id_, pose, uncertainty)
+
+    def correct_poses(
+        self,
+        ids: list[int],
+        poses: list[np.ndarray],
+    ) -> tuple[list[int], list[np.ndarray]]:
+        """Correct the poses of the markers based on the current state.
+
+        Arguments:
+            ids: list of ids of the markers
+            poses: list of poses of the markers
+
+        Returns:
+            corrected_ids: list of ids of the markers
+            corrected_poses: list of corrected poses of the markers
+
+        """
+        corrected_ids = []
+        corrected_poses = []
+
+        cam_quat = self.state[QUAT_DIMS]  # Assuming (w, x, y, z)
+        rot_mc = Rotation.from_quat(cam_quat, scalar_first=True)
+
+        for idx, pose in zip(ids, poses):
+            if idx not in self.landmarks:
+                continue
+
+            index = self.landmarks[idx]
+            lm_i = LM_DIMS * index + CAM_DIMS
+
+            # state landmark orientation
+            state_quat = self.state[lm_i + 3 : lm_i + 7]  # qw, qx, qy, qz
+            state_rot_ml = Rotation.from_quat(state_quat, scalar_first=True)
+
+            # observed landmark rotation in camera frame
+            rot_cl = Rotation.from_euler("xyz", pose[3:])
+
+            # estimate landmark rotation in map frame
+            rot_ml = rot_mc * rot_cl
+
+            # difference between estimated and expected
+            r_diff = rot_ml * state_rot_ml.inv()
+
+            angle = np.degrees(r_diff.magnitude())
+            angle = min(angle, 360 - angle)  # handle quaternion double cover
+
+            if angle < QUAT_THRESHOLD:
+                corrected_ids.append(idx)
+                corrected_poses.append(pose)
+            else:
+                pass
+
+        return corrected_ids, corrected_poses
 
     def observe(
         self,

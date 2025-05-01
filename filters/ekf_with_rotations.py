@@ -1,7 +1,6 @@
 """Defines an EKF class."""
 
 # save to ignore the warning about the sparse matrix format
-import time
 import warnings
 
 import dill
@@ -11,6 +10,7 @@ from scipy import sparse
 from scipy.spatial.transform import Rotation
 
 from filters.base_filter import BaseFilter
+
 # from filters.twist_ekf import TwistMotionModel
 
 warnings.filterwarnings(
@@ -24,9 +24,11 @@ INITIAL_CAMERA_UNCERTAINTY = 0.1
 INITIAL_LANDMARK_UNCERTAINTY = 0.7
 
 R_UNCERTAINTY = 0.9
-Q_UNCERTAINTY_CAM = 0.3
+Q_UNCERTAINTY_CAM = 0.2
 Q_ERROR_UNCERTAINTY_CAM = 0.5
-Q_UNCERTAINTY_LM = 0.01
+
+Q_UNCERTAINTY_LM_XYZ = 0.01
+Q_UNCERTAINTY_LM_QUAT = 0.05
 
 CAM_DIMS = 10  # x, y, z, qw, qx, qy, qz, ex, ey, ez
 XYZ_DIMS = slice(0, 3)  # x, y, z
@@ -35,7 +37,7 @@ ERROR_DIMS = slice(7, 10)  # ex, ey, ez
 
 LM_DIMS = 10  # x, y, z
 
-QUAT_THRESHOLD = 1.2
+QUAT_THRESHOLD = 50
 
 
 class EKF_Rotations(BaseFilter):
@@ -100,27 +102,13 @@ class EKF_Rotations(BaseFilter):
 
     def predict(self) -> None:
         """Predict the next state of the system."""
-        # # cam_movement avg
-        # dt = 1.0 / 30.0  # assuming 30 FPS
-        # twist = self.twist_model.predict(dt)
-        # self.state[XYZ_DIMS] += twist[:3]  # update translation
-
-        # w = twist[3:6]  # angular velocity
-        # # update the quaternion using small angle approximation
-        # dq = [1, *w * dt / 2]  # small angle approximation
-        # q = self.state[QUAT_DIMS]
-        # q = Rotation.from_quat(q, scalar_first=True)
-        # dq = Rotation.from_quat(dq, scalar_first=True)
-        # q = dq * q  # quaternion multiplication
-        # self.state[QUAT_DIMS] = q.as_quat(scalar_first=True)
-
         # update the uncertainity matrix for camera motion
         q_dims = LM_DIMS * self.num_landmarks + CAM_DIMS
         q = np.zeros((q_dims, q_dims))
         q[XYZ_DIMS, XYZ_DIMS] = np.eye(XYZ_DIMS.stop) * Q_UNCERTAINTY_CAM
         q[ERROR_DIMS, ERROR_DIMS] = np.eye(3) * Q_ERROR_UNCERTAINTY_CAM
         q[CAM_DIMS:, CAM_DIMS:] = (
-            np.eye(LM_DIMS * self.num_landmarks) * Q_UNCERTAINTY_LM
+            np.eye(LM_DIMS * self.num_landmarks) * Q_UNCERTAINTY_LM_XYZ
         )
         self.uncertainty += q
 
@@ -213,6 +201,7 @@ class EKF_Rotations(BaseFilter):
         z = None
         h = None
         dh = None
+
         for idx, pose in zip(ids, poses):
             index = self.landmarks[idx]
 
@@ -229,22 +218,6 @@ class EKF_Rotations(BaseFilter):
                 pose[3:],
             ).as_quat(scalar_first=True)
 
-            # get the current orientation
-            lm_i = LM_DIMS * index + CAM_DIMS
-            state_quat = self.state[lm_i + 3 : lm_i + 7]  # qw, qx, qy, qz
-
-            norm = np.linalg.norm(
-                orientation - state_quat,
-            )
-
-            # check if the orientation is too different
-            if norm > QUAT_THRESHOLD:
-                # if so, skip this observation
-                print(
-                    f"Skipping landmark {idx} "
-                    f"due to large orientation difference ({norm:.3f})",
-                )
-                continue
             # convert to quaternion
             pose_quat = np.hstack(
                 (pose[XYZ_DIMS], orientation),

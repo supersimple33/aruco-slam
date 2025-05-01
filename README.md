@@ -180,6 +180,7 @@ Please ensure that you have properly calibrated your camera.
 ├── filters
 │   ├── base_filter.py               # Base class, marker detection, map saving/loading
 │   ├── extended_kalman_filter.py    # MEKF implementation
+│   ├── ekf_with_rotations.py        # Same as above, but uses landmark orientations.
 │   └── factor_graph.py              # Factor graph implementation
 ├── thirdparty
 │   ├── pangolin/                    # Pangolin library for 3D visualization

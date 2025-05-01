@@ -1,4 +1,4 @@
-"""Defines an EKF class."""
+"""Defines a factor graph class."""
 
 import gtsam
 import numpy as np
@@ -18,9 +18,9 @@ from filters.base_filter import BaseFilter
 
 PRIOR_NOISE_XYZ = 0.0  # meters
 PRIOR_NOISE_RPY = 20 * np.pi / 180  # degrees -> radians
-ODOM_NOISE_XYZ = 0.2  # meters
-ODOM_NOISE_RPY = 60 * np.pi / 180  # degrees -> radians
-MEASUREMENT_NOISE_XYZ = 0.1  # meters
+ODOM_NOISE_XYZ = 0.1  # meters
+ODOM_NOISE_RPY = 20 * np.pi / 180  # degrees -> radians
+MEASUREMENT_NOISE_XYZ = 0.5  # meters
 MEASUREMENT_NOISE_RPY = 300 * np.pi / 180  # degrees -> radians
 
 HISTORICAL_FREQUENCY = 10
@@ -150,9 +150,7 @@ class FactorGraph(BaseFilter):
             self.current_estimate = self.initial_estimate
         else:
             self.isam.update(self.graph, self.initial_estimate)
-            print(self.graph.size())
             self.current_estimate = self.isam.calculateEstimate()
-            # print(self.isam.__dir__())
             self.initial_estimate.clear()
 
         self.i += 1
@@ -289,7 +287,8 @@ class FactorGraph(BaseFilter):
             X(self.i),
             L(idx),
             Pose3(
-                cam_rot_inv,  # TODO(ssilver): use landmark orientation
+                # TODO(ssilver): use landmark orientation # noqa: TD003 FIX002
+                cam_rot_inv,
                 Point3(pose[:3]),  # landmark in camera frame
             ),
             self.measurement_noise,

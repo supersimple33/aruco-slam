@@ -15,6 +15,8 @@ VIDEO_2D_FNAME = "outputs/images/output_2d.mp4"
 CALIB_MTX_FILE = "calibration/camera_matrix.npy"
 DIST_COEFFS_FILE = "calibration/dist_coeffs.npy"
 
+XYZ_DIMS = slice(0, 3)
+
 
 class Viewer2D:
     """Class for displaying 2D image."""
@@ -91,8 +93,7 @@ class Viewer2D:
 
         # draw the points from the filter
         for p_ml in points:
-            p_ml = p_ml[:3]  # take only the translation part
-            p_cl = (p_ml - ct) @ rot_mc
+            p_cl = (p_ml[XYZ_DIMS] - ct) @ rot_mc
             try:
                 frame = self.draw_point(frame, p_cl)
             except cv2.error:
