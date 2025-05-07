@@ -180,6 +180,7 @@ Please ensure that you have properly calibrated your camera.
 ├── filters
 │   ├── base_filter.py               # Base class, marker detection, map saving/loading
 │   ├── extended_kalman_filter.py    # MEKF implementation
+│   ├── ekf_with_rotations.py        # Same as above, but uses landmark orientations.
 │   └── factor_graph.py              # Factor graph implementation
 ├── thirdparty
 │   ├── pangolin/                    # Pangolin library for 3D visualization
@@ -206,11 +207,10 @@ Please ensure that you have properly calibrated your camera.
 
 - [x] ArUco Detection, Pose Estimation 
 - [x] Moving Average Motion Model (EKF)
-- [x] Filters All The Way Down Motion Model
+- [ ] Filters All The Way Down Motion Model
 - [x] EKF
 - [x] Non-Additive Quaternions in EKF (MEKF)
 - [ ] UKF
-- [ ] Iterative EKF
 - [x] Factor Graph
 - [ ] Particle Filter
 - [x] 3D Visualization
