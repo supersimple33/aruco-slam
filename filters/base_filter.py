@@ -132,6 +132,7 @@ class BaseFilter:
         frame: np.ndarray,
         should_filter: bool = True,  # noqa: FBT001 FBT002
         iteration: int = 0,
+        marker_size: float = 0.16,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Process a frame.
 
@@ -154,7 +155,7 @@ class BaseFilter:
             frame = cv2.aruco.drawDetectedMarkers(frame, corners, ids)
             ids = ids.flatten()
 
-            detected_poses = self.estimate_pose_of_markers(corners, 0.2)
+            detected_poses = self.estimate_pose_of_markers(corners, marker_size)
 
             if should_filter:
                 self.observe(ids, detected_poses)
