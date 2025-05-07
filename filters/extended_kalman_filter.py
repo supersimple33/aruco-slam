@@ -155,8 +155,11 @@ class EKF(BaseFilter):
         dq = [1, *innovation[ERROR_DIMS] / 2]  # small angle approximation
 
         # apply the correction to the accumulative quaternion
-        q = Rotation.from_quat(q, scalar_first=True)
-        dq = Rotation.from_quat(dq, scalar_first=True)
+        # move the scalar to last after beign first ie w x y z to x y z w
+        q_last_format = np.array([q[1], q[2], q[3], q[0]])
+        dq_last_format = np.array([dq[1], dq[2], dq[3], dq[0]])
+        q = Rotation.from_quat(q)
+        dq = Rotation.from_quat(dq)
         q = dq * q
 
         self.state[QUAT_DIMS] = q.as_quat(scalar_first=True)
